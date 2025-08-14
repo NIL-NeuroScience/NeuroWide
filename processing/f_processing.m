@@ -17,7 +17,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function f_processing_BCR(date,mouse,rotation,allRuns,dataDir,user,badRuns)
+function f_processing(date,mouse,rotation,allRuns,dataDir,user,badRuns)
 %% test inputs
 % date = '25-06-10';
 % mouse = 'B6_247';
