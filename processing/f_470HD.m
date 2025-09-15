@@ -1,0 +1,16 @@
+function [gfp,gfp_HD] = f_470HD(gfp,HbO,HbR)
+
+if nargin > 1
+    tmpWL = [470 515];
+    tmpExtinction = f_GetExtinctions_WF(tmpWL);     % in cm
+    tmpPathEx = f_pathlengths_WF(tmpWL(1),0.4)/2;       % pathlengths returns in cm
+    tmpPathEm = f_pathlengths_WF(tmpWL(2),0.4)/2;
+    tmpMuaEx = (tmpExtinction(1,1).*HbO) + (tmpExtinction(1,2).*HbR);
+    tmpMuaEm = (tmpExtinction(2,1).*HbO) + (tmpExtinction(2,2).*HbR);
+    gfp = gfp./mean(gfp,3);
+    gfp_HD = (gfp)./exp(-(tmpMuaEx.*tmpPathEx + tmpMuaEm.*tmpPathEm))-1;
+    gfp = gfp-1;
+else
+    gfp = gfp./mean(gfp,3)-1;
+    gfp_HD = [];
+end
