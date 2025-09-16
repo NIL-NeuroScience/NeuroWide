@@ -1,15 +1,12 @@
-function [corr,f] = f_corr(varargin)
+function [corr,f] = f_corr(sig1,sig2,dim,varargin)
 
 % parse inputs
-sig1 = varargin{1};
-sig2 = varargin{2};
-dim = varargin{3};
-
 p = inputParser;
 addParameter(p,'plot',false);
 
-parse(p,varargin{4:end});
+parse(p,varargin{:});
 
+% calculate correlation along dim
 sig1 = sig1 - mean(sig1,dim);
 sig2 = sig2 - mean(sig2,dim);
 
@@ -20,6 +17,7 @@ cov = sum((sig1.*sig2),dim);
 
 corr = cov./std; 
 
+% plot result
 if p.Results.plot
     f = figure;
     imagesc(corr,AlphaData=~isnan(corr));
