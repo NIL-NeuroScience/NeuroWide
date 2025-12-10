@@ -3,19 +3,26 @@
 % 
 %                   Single photon data preprocessing
 % 
-% Version 0.1 MTH 12/16/2021
-% Version 0.2 PD  01/28/2022
-% Version 0.3 PD  03/31/2022
-% Version 1.0 MTH 01/28/2023
-% Version 1.1 MTH 03/20/2023 processing of multiple files/deactivated mask
-% Version 1.2 MTH 03/20/2023 rearranged save and clearvars to avoid error 
-%                            for very large files
-% Version 1.3 MTH 04/26/2023 improved handling of series w/o 4 channels
-%                            turned off try catch for debugging
-% Version 1.4 BCR 07/11/2023 added smoothing option and specific baseline
-%                            option, added rfp HD correction
-% Version 1.5 BCR 09/15/2025 improved functionality
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Initial processing script for widefield fluorescence and intrinsic
+% imaging data. Retrieves and saves imaging metadata. Estimates dF/F for
+% fluorescent imaging data, estimates changes in hemoglobin oxygenation and
+% concentration, and applies hemodynamic artifact correction algorithms to
+% both fluorescent channels.
+% 
+% Authors: Martin Thunemann, Patrick Doran, Brad Rauscher
+% 
+% INPUTS: f_ROIprocessing(Mouse,Date,Runs,_)
+%   Mouse: mouse ID
+%   Date: session date
+% 
+% EXTRA PARAMETERS:
+%   runs: list of runs to analyze. Leave empty to analyze all available
+%       runs (default = [])
+%   smooth: 2D smoothing kernel. Set to 0 to not smooth (default = 2)
+%   compression: compression value (default = 0)
+%   rotation: rotation of videos in degrees (default = '0')
+%   load_dir: directory to load from (default = 'bcraus/HRF/1P')
+%   save_dir: directory to save to (default = 'bcraus/HRF/1P')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function f_processing(Mouse,Date,varargin)
@@ -23,6 +30,7 @@ function f_processing(Mouse,Date,varargin)
 p = inputParser;
 addParameter(p,'runs',[]);
 addParameter(p,'smooth',2);
+addParameter(p,'compression',0);
 addParameter(p,'rotation',0);
 addParameter(p,'load_dir','bcraus/HRF/1P');
 addParameter(p,'save_dir','bcraus/HRF/1P');
@@ -31,14 +39,11 @@ parse(p,varargin{:});
 
 %% Define settings for data processing
 
-commonSettings.Runs = p.Results.runs;                 % Set to 1 to do all runs or 0 to only do certain runs
+commonSettings.Runs = p.Results.runs;
 
-commonSettings.hasPylon = false;            % True when there are pylon recordings
-commonSettings.saveHDF5 = true;         % Stores data as h5 file
-commonSettings.channelList = [1,1]; % F-green, F-red, R-530, R-630; to be implemented.
-commonSettings.debug.txt='/projectnb/devorlab/bcraus/fullProcessing.txt';% verbose output, to be implemented.
-commonSettings.compression=0;
-commonSettings.chunkSize=[2^4 2^4 2^4];          % optimized for L2 cache of mesoscope computer
+commonSettings.hasPylon = false;        % True when there are pylon recordings
+commonSettings.compression = p.Results.compression;
+commonSettings.chunkSize = [2^4 2^4 2^4]; % optimized for L2 cache of mesoscope computer
 commonSettings.smoothVal = p.Results.smooth;
 commonSettings.rotation = p.Results.rotation;
 
@@ -52,6 +57,7 @@ for rootFolderCounter=1:size(rootFolderList,1)
     if ~exist(commonFolders.root,'dir')
         error([commonFolders.root ' does not exist']);
     end
+
     %% Reads root folder and returns folder structure
     commonFolders.folderIn=f_returnFolderStructure(commonFolders.root,4);
     commonFolders.folderList=f_findFoldersMaster(commonFolders.folderIn,{'onephoton','daq','behaviorCam','processed','ephys'});
@@ -296,7 +302,8 @@ for rootFolderCounter=1:size(rootFolderList,1)
         end
 
         clearvars tmpSettings rawImageChannel;
-% PROCESSING BEGINS
+        
+        % PROCESSING BEGINS
 
         %% Process reflectance images to estimate [Hb]
         if ~isempty(settings.hdChannel1)

@@ -1,3 +1,11 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Inputs:
+%    filenames: cell array of .tiff filepaths
+%    behaviorROIs.pupil_mask: binary mask of eye
+%    behaviorROIs.pupil_thrVal: threshold value to mask pupil vs. iris
+%    behaviorROIs.eye_length: length (in pixels) horizontally across eye
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 function [pupil] = f_processPupil(filenames,behaviorROIs)
 
 tmpPupil = [];

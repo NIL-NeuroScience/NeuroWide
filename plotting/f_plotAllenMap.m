@@ -1,4 +1,4 @@
-function f_plotAllenMap(varargin)
+function img = f_plotAllenMap(varargin)
 
 p = inputParser;
 addParameter(p,'mask',[]);
@@ -6,7 +6,8 @@ addParameter(p,'parcellation',[]);
 addParameter(p,'cmp',[]);
 addParameter(p,'title',[]);
 addParameter(p,'cLabel',[]);
-addParameter(p,'cRange',[]);
+addParameter(p,'clim',[]);
+addParameter(p,'cbar',1);
 
 parse(p,varargin{2:end});
 
@@ -17,7 +18,7 @@ mask = p.Results.mask;
 cmp = p.Results.cmp;
 Title = p.Results.title;
 cLabel = p.Results.cLabel;
-cRange = p.Results.cRange;
+cRange = p.Results.clim;
 
 allen_path = fullfile(f_path,'plotting/refAllen.mat');
 
@@ -49,10 +50,14 @@ imAlpha = ~isnan(img);
 imagesc(img,AlphaData=imAlpha);
 axis image off;
 if ~isempty(cmp)
-    colormap(cmp);
+    ax = gca;
+    colormap(ax,cmp);
 end
-c = colorbar;
-c.Label.String = cLabel;
+
+if p.Results.cbar
+    c = colorbar;
+    c.Label.String = cLabel;
+end
 title(Title);
 set(gca,'FontSize',14);
 if ~isempty(cRange)

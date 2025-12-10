@@ -1,5 +1,19 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%                         Morlet Wavelet Analysis
+%
+% Spectral analysis function to calculate the instantaneous power of the
+% input signal using the Morlet wavelet approach.
+% 
+% INPUTS: f_ROIprocessing(Mouse,Date,Runs,_)
+%   y: signal to estimate power from
+%   fs: sampling rate of y (Hz)
+%   fwin: frequency window in the form [f_low, f_high] (Hz)
+%   fsteps: number of steps to take in frequency space (100 is normal)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 function [spg,t,fSpectogram] = f_morlet(y,fs,fwin,fsteps)
-%%
 
 t = 1/fs:1/fs:size(y,1)/fs;
 

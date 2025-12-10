@@ -1,9 +1,11 @@
-function [perf,IRF,outParams,corrGram] = f_1xIRF(varargin)
+function [perf,IRF,outParams,corrGram,pred_HbT] = f_1xIRF_varWeights(varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Performs deconvolution of HbT by applying a single double alpha function 
-% convolution kernel to Ca.
+% convolution kernel to Ca. Allows for spatially variant weights (A, B) for
+% both alpha functions and spatially invariant timing parameters 
+% (t0,tauA,tauB).
 % 
-% INPUTS: f_1xIRF(HbT,Ca,win,brain_mask,_)
+% INPUTS: f_1xIRF_varWeights(HbT,Ca,win,brain_mask,_)
 %   HbT - HbT video
 %   Ca - Ca video
 %   win - window to use for IRF kernel (frames) [t1 t2]
@@ -71,16 +73,13 @@ dsHbT = dsHbT(nanIdx,:)';
 dsCa = dsCa(nanIdx,:)';
 
 %% normalize data
-
 if p.Results.norm
     dsHbT = dsHbT./std(dsHbT,0,1);
     dsCa = dsCa./std(dsCa,0,1);
 end
-
 %% optimization algorithm
 if string(p.Results.method) == "direct"
     % create design matrices
-    
     n_IRF = (win(2)-win(1))+1;
     
     Ca_mat = zeros(T,N,n_IRF);
@@ -98,36 +97,39 @@ if string(p.Results.method) == "direct"
         Ca_mat(i3(v):i4(v),:,v) = dsCa(i1(v):i2(v),:);
     end
     
-    Ca_mat = reshape(Ca_mat,[],n_IRF);
-    design_HbT = dsHbT(:);
+    Ca_mat = permute(Ca_mat,[3 2 1]);
+    design_HbT = permute(dsHbT,[3 2 1]);
     
-    % optimize initial parameters    
-    A = 1;
-    B = -1;
+    % optimize initial parameters
+    
+    A = ones(1,N);
+    B = -ones(1,N);
     
     hrf1 = f_alpha_IRF(t0,tau1,tau2,A,0,win);
     hrf2 = f_alpha_IRF(t0,tau1,tau2,0,B,win);
     
-    convPos = sum(Ca_mat.*hrf1',2);
-    convNeg = sum(Ca_mat.*hrf2',2);
+    convPos = sum(Ca_mat.*hrf1,1);
+    convNeg = sum(Ca_mat.*hrf2,1);
     
-    LR = [convPos,convNeg] \ design_HbT;
-    A = LR(1);
-    B = -LR(2);
+    LR = f_hemRegress(design_HbT,cat(4,convPos,convNeg),ones(1,N));
+    
+    A = LR(:,:,1);
+    B = -LR(:,:,2);
     
     % run optimization using gradient descent
-    fun = @(params)f_hrf_cost_func(params(1),params(2),params(3),params(4),params(5),win,Ca_mat,design_HbT);
+    fun = @(params)f_hrf_cost_func(params(1),params(2),params(3),params(4:N+3),params(N+4:2*N+3),win,Ca_mat,design_HbT);
     
-    options = optimset('MaxFunEvals',25000,'MaxIter',500,'Display','iter','Algorithm','active-set','FunValCheck','on','Display','off');
-    params = fmincon(fun,[t0, tau1, tau2, A, B],[],[],[],[],[0,0.01,0.01,-Inf,-Inf],[win(2),win(2),win(2),Inf,Inf],[],options);
+    options = optimset('MaxFunEvals',25000,'MaxIter',500,'Display','iter','Algorithm','active-set','Display','off');
+    params = fmincon(fun,[t0, tau1, tau2, A, B],[],[],[],[],[0,0.01,0.01,-Inf*ones(1,numel(A)*2)],[win(2) win(2) win(2) Inf*ones(1,numel(A)*2)],[],options);
+
 else
-    A = 1;
-    B = -1;
+    A = ones(1,N);
+    B = -ones(1,N);
     
     hrf1 = f_alpha_IRF(t0,tau1,tau2,A,0,win);
     hrf2 = f_alpha_IRF(t0,tau1,tau2,0,B,win);
     
-    fft_length = 2^nextpow2(size(dsCa,1) + numel(hrf1));
+    fft_length = 2^nextpow2(size(dsCa,1) + size(hrf1,1));
     fft_signal = fft(dsCa, fft_length);
 
     convPos = ifft(fft_signal .* fft(hrf1,fft_length),'symmetric');
@@ -136,40 +138,61 @@ else
     convPos = convPos(1:T,:);
     convNeg = convNeg(1:T,:);
 
-    LR = [convPos(:),convNeg(:)] \ dsHbT(:);
-    A = LR(1);
-    B = -LR(2);
+    LR = f_hemRegress(permute(dsHbT,[3,2,1]),permute(cat(4,convPos,convNeg),[3,2,1,4]),ones(1,N));
     
-    %
-    fun = @(params)f_hrf_cost_func_fft(params(1),params(2),params(3),params(4),params(5),win,fft_signal,dsHbT,fft_length);
+    A = LR(:,:,1);
+    B = -LR(:,:,2);
+
+    % optimization algorithm
+    fun = @(params)f_hrf_cost_func_fft(params(1),params(2),params(3),params(4:N+3),params(N+4:2*N+3),win,fft_signal,dsHbT,fft_length);
     
-    options = optimset('MaxFunEvals',25000,'MaxIter',500,'Display','iter','Algorithm','active-set','FunValCheck','on','Display','off');
-    params = fmincon(fun,[t0, tau1, tau2, A, B],[],[],[],[],[0,0.01,0.01,-Inf,-Inf],[win(2),win(2),win(2),Inf,Inf],[],options);
+    options = optimset('MaxFunEvals',25000,'MaxIter',500,'Display','iter','Algorithm','active-set','Display','off');
+    params = fmincon(fun,[t0, tau1, tau2, A, B],[],[],[],[],[0,0.01,0.01,-Inf*ones(1,numel(A)*2)],[win(2) win(2) win(2) Inf*ones(1,numel(A)*2)],[],options);
 end
 
-%% calculate sliding correlation window between predicted HbT and HbT
-IRF = f_alpha_IRF(params(1),params(2),params(3),params(4),params(5),win);
-conv = f_3Dconvolve(Ca./std(Ca,0,3),IRF,win,ones(size(brain_mask)));
-perf = f_corr(HbT,conv,3);
+%% pixel-wise LR
 
-if ~isempty(p.Results.corrWin)
-    corrGram = f_HemCorrGram(HbT,conv,p.Results.corrWin);
+hrf1 = f_alpha_IRF(params(1),params(2),params(3),1,0,win);
+hrf2 = f_alpha_IRF(params(1),params(2),params(3),0,-1,win);
+
+if p.Results.norm
+    normCa = Ca./std(Ca,0,3);
+else
+    normCa = Ca;
 end
+convPos = f_3Dconvolve(normCa,hrf1,win,brain_mask);
+convNeg = f_3Dconvolve(Ca./std(Ca,0,3),hrf2,win,brain_mask);
 
-%% save params
+LR = f_hemRegress(HbT./std(HbT,0,3),cat(4,convPos,convNeg),brain_mask);
+
 outParams = struct;
 outParams.t0 = params(1);
-outParams.tau1 = params(2);
-outParams.tau2 = params(3);
-outParams.A = params(4);
-outParams.B = params(5);
+outParams.tauA = params(2);
+outParams.tauB = params(3);
+outParams.A = LR(:,:,1);
+outParams.B = -LR(:,:,2);
 
-%% Functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+dim = size(Ca);
+
+IRF = f_alpha_IRF(params(1),params(2),params(3),outParams.A(:)',outParams.B(:)',win)';
+IRF = reshape(IRF,dim(1),dim(2),[]);
+
+%% calculate performance
+pred_HbT = convPos.*LR(:,:,1)+convNeg.*LR(:,:,2);
+
+perf = f_corr(HbT,pred_HbT,3);
+
+if ~isempty(p.Results.corrWin)
+    corrGram = f_HemCorrGram(HbT,pred_HbT,p.Results.corrWin);
+end
+
+%%
 
 function J = f_hrf_cost_func(t0,tau1,tau2,A,B,range,X_mat,y)
     hrf = f_alpha_IRF(t0,tau1,tau2,A,B,range);
     
-    conv_result = sum(X_mat.*hrf',2);
+    conv_result = sum(X_mat.*hrf,1);
     J = mean((y - conv_result).^2,'all');
 end
 

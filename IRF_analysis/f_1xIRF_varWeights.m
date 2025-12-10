@@ -39,6 +39,7 @@ addParameter(p,'corrWin',[]);
 addParameter(p,'maxThreads',4);
 addParameter(p,'initialParam',10*[0.1,0.5,0.53]);
 addParameter(p,'method','fft');
+addParameter(p,'norm',1);
 
 parse(p,varargin{5:end});
 
@@ -72,9 +73,10 @@ dsHbT = dsHbT(nanIdx,:)';
 dsCa = dsCa(nanIdx,:)';
 
 %% normalize data
-dsHbT = dsHbT./std(dsHbT,0,1);
-dsCa = dsCa./std(dsCa,0,1);
-
+if p.Results.norm
+    dsHbT = dsHbT./std(dsHbT,0,1);
+    dsCa = dsCa./std(dsCa,0,1);
+end
 %% optimization algorithm
 if string(p.Results.method) == "direct"
     % create design matrices
@@ -153,10 +155,17 @@ end
 hrf1 = f_alpha_IRF(params(1),params(2),params(3),1,0,win);
 hrf2 = f_alpha_IRF(params(1),params(2),params(3),0,-1,win);
 
-convPos = f_3Dconvolve(Ca./std(Ca,0,3),hrf1,win,brain_mask);
-convNeg = f_3Dconvolve(Ca./std(Ca,0,3),hrf2,win,brain_mask);
+if p.Results.norm
+    normCa = Ca./std(Ca,0,3);
+    normHbT = HbT./std(HbT,0,3);
+else
+    normCa = Ca;
+    normHbT = HbT;
+end
+convPos = f_3Dconvolve(normCa,hrf1,win,brain_mask);
+convNeg = f_3Dconvolve(normCa,hrf2,win,brain_mask);
 
-LR = f_hemRegress(HbT./std(HbT,0,3),cat(4,convPos,convNeg),brain_mask);
+LR = f_hemRegress(normHbT,cat(4,convPos,convNeg),brain_mask);
 
 outParams = struct;
 outParams.t0 = params(1);

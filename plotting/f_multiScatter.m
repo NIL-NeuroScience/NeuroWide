@@ -12,6 +12,9 @@ addParameter(p,'ylim',[]);
 addParameter(p,'xlim',[]);
 addParameter(p,'alpha',1);
 addParameter(p,'lineWidth',1);
+addParameter(p,'plotAverage',1);
+addParameter(p,'markerSize',50);
+addParameter(p,'intercept',1);
 
 parse(p,varargin{3:end});
 
@@ -20,7 +23,7 @@ cIdx = round(linspace(1,size(p.Results.cmp,1),N));
 
 hold on;
 for i = 1:N
-    scatter(X{i},Y{i},'filled',MarkerFaceAlpha=p.Results.alpha,MarkerFaceColor=p.Results.cmp(cIdx(i),:));
+    scatter(X{i},Y{i},p.Results.markerSize,'filled',MarkerFaceAlpha=p.Results.alpha,MarkerFaceColor=p.Results.cmp(cIdx(i),:));
 end
 
 if ~isempty(p.Results.xlim)
@@ -40,14 +43,27 @@ end
 
 % plot linear regression
 
-ends = zeros(N,2);
-for i = 1:N
-    lm = fitlm(X{i},Y{i});
-    lm = table2array(lm.Coefficients);
-    ends(i,:) = current_x*lm(2,1)+lm(1,1);
-    plot(current_x,ends(i,:),color=[p.Results.cmp(cIdx(i),:) p.Results.alpha],lineWidth=p.Results.lineWidth);
+if p.Results.intercept
+    ends = zeros(N,2);
+    for i = 1:N
+        lm = fitlm(X{i},Y{i});
+        lm = table2array(lm.Coefficients);
+        ends(i,:) = current_x*lm(2,1)+lm(1,1);
+        plot(current_x,ends(i,:),color=p.Results.cmp(cIdx(i),:),lineWidth=p.Results.lineWidth);
+    end
+    if p.Results.plotAverage
+        plot(current_x,mean(ends),color=[0 0 0],lineWidth=2*p.Results.lineWidth);
+    end
+else
+    slopes = zeros(N,1);
+    for i = 1:N
+        slopes(i) = X{i}(:) \ Y{i}(:);
+        plot(current_x,current_x*slopes(i),color=p.Results.cmp(cIdx(i),:),lineWidth=p.Results.lineWidth);
+    end
+    if p.Results.plotAverage
+        plot(current_x,current_x*mean(slopes),color=[0 0 0],lineWidth=2*p.Results.lineWidth);
+    end
 end
-plot(current_x,mean(ends),color=[0 0 0],lineWidth=2*p.Results.lineWidth);
 
 title(p.Results.title);
 xlabel(p.Results.xlabel);

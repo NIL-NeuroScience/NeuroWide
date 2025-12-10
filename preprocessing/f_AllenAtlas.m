@@ -1,19 +1,17 @@
 function [parcellation] = f_AllenAtlas(img,brain_mask,isLeft)
 %%
 
-addpath('/projectnb/devorlab/bcraus/AnalysisCode/new_processing/AllenParcellation');
-
 Tolerance = 0.01;
 
 tmpIn = img;
 % tmpIn = uint16(tmpIn);
 
-f_Do_Registration_WF(tmpIn,brain_mask);
+f_Do_Registration(tmpIn,brain_mask);
 
 tmpIn = double(tmpIn).*brain_mask;
 % tmpIn = uint16(tmpIn);
 
-parc = f_Finish_Registration_WF(tmpIn,evalin('base','FinalTform'),Tolerance,isLeft);
+parc = f_Finish_Registration(tmpIn,evalin('base','FinalTform'),Tolerance,isLeft);
 
 %% find indexes of chosen areas
 areas = {'MOp','MOs','SSp-bfd','SSp-tr','SSp-ll','SSp-ul','SSp-un','VISpm','VISrl','VISam','VISa','VISp'};

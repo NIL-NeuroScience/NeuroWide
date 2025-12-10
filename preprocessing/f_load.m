@@ -2,7 +2,6 @@ function [data,Signals,brain_mask,parcellation,vessel_mask,dataIn,...
     settings,files,digitalInput] = f_load(Mouse,Date,Run,idx,varargin)
 
 %% parse inputs
-
 p = inputParser;
 addParameter(p,'loadDir','bcraus/HRF/1P');
 addParameter(p,'behCam',false);
@@ -105,7 +104,6 @@ tmp = cell(N,1);
 
 h5 = files.h5;
 
-tic
 if ~isempty(p.Results.range)
     info = h5info(files.h5,dataOrder{1});
     dims = info.Dataspace.Size;
@@ -122,7 +120,7 @@ else
         tmp{i} = h5read(h5,dataOrder{i});
     end
 end
-toc
+
 
 %%
 
