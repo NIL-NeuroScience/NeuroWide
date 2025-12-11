@@ -1,12 +1,14 @@
 function [refBM, refParcellation, refMasks] = f_loadRefAllen(varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                         f_loadRefAllen
+% author - Brad Rauscher (created Dec/10/2025)
+% 
 % Loads reference allen parcellation variables.
 % 
 % OPTIONAL INPUTS:
 %   hem: 0 (default) - both hemispheres. 1 - left hemisphere. 
 %     2 - right hemisphere. 
-%
+% 
 % OUTPUTS:
 %   refBM: reference brain exposure mask.
 %   refParcellation: full reference parcellation struct.
