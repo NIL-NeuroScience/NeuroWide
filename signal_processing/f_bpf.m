@@ -1,13 +1,47 @@
 function filt = f_bpf(sig,fr,fs,dim)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                               f_bpf
+% author - Brad Rauscher
+% 
+% Performs band-pass filtering.
+% 
+% INPUTS:
+%   sig: signal
+%   fr: frequency window [f_low, f_high]. If f_low = 0, only performs
+%       low-pass filtering. If f_high = fs/2, only performs high-pass 
+%       filtering.
+%   fs: sampling frequency of sig (Hz).
+%   dim: dimension to perform filtering on. (default = 1)
+% 
+% OUTPUTS:
+%   filt: filtered signal with the same size as sig.
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if nargin < 4
+    dim = 1;
+end
+
+n_dims = ndims(sig);
+
+% check dim matches number of dimensions
+if dim > n_dims
+    error('"sig" does not have "dim" dimensions!!!');
+end
+
+new_dims = 1:n_dims;
+new_dims(new_dims == dim) = [];
+
+new_dims = [dim, new_dims];
+inv_dims = zeros(size(new_dims));
+inv_dims(new_dims) = 1:numel(new_dims);
+
+sig = permute(sig,new_dims);
+
+% perform filtering
 
 idx = fr == [0 fs/2];
 idx = ~idx;
-
-if nargin > 3
-    if dim == 3
-        sig = permute(sig,[3 1 2]);
-    end
-end
 
 if idx
     [r,a] = butter(6,fr(1)/(fs/2));
@@ -26,8 +60,4 @@ else
     filt = sig;
 end
 
-if nargin > 3
-    if dim == 3
-        filt = permute(filt,[2 3 1]);
-    end
-end
+filt = permute(filt,inv_dims);

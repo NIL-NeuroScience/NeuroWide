@@ -1,4 +1,4 @@
-function [img, fig_img] = f_plotAllenMap(data,varargin)
+function img = f_plotAllenMap(data,varargin)
 
 p = inputParser;
 addParameter(p,'mask',[]);

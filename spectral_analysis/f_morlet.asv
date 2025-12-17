@@ -13,14 +13,14 @@
 %   fsteps: number of steps to take in frequency space (100 is normal)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [spg,t,fSpectogram] = f_morlet(y,fs,fwin,fsteps,varargin)
+% function [spg,t,fSpectogram] = f_morlet(y,fs,fwin,fsteps)
 
-% handle inputs
+%% temp inputs
 
-p = inputParser;
-addParameter(p,'plot',0);
-
-parse(p,varargin{:});
+y = data.EEG(:,1);
+fs = 500;
+fwin = [0.5,100];
+fsteps = 50;
 
 %%
 
@@ -51,35 +51,38 @@ spg = abs(P).^2;
 
 %% plot spg
 
-if ~p.Results.plot
-    return
-end
-
-% find ticks
 y_int = log10(fSpectogram(1));
 M = (fsteps - 1) / (log10(fSpectogram(end)) - y_int);
 
-fun = @(x) 1 + M * (log10(x) - y_int);
+fun = @(x) 1 + M * (log10)
+ind_map = 1 + M * (log10(fSpectogram) - y_int);
 
-[major_ticks, minor_ticks] = log_ticks(fwin);
+figure; plot(ind_map);
 
-% plot spg
-plot_spg = log10(flipud((spg)'));
+%%
 
+plot_spg = log10(flipud((spg.*fSpectogram)'));
+
+plot_f = log10(fSpectogram);
+plot_f = plot_f([1, end]);
+plot_f(1) = ceil(plot_f(1));
+plot_f(2) = floor(plot_f(2));
+plot_f = plot_f(1):plot_f(2);
+plot_f = 10.^plot_f;
+[~,plot_f_ind] = min(abs(fSpectogram'-plot_f));
+
+f = figure;
 ax = gca;
-imagesc(plot_spg, YData=size(spg,2):-1:1, XData=(1:size(spg,1))/fs);
+img = imagesc(plot_spg, YData=size(spg,2):-1:1, XData=(1:size(spg,1))/fs);
 clim(prctile(plot_spg(:),[0.1, 99.9]));
 
 % minor_f = [minor_f, (2:9) * 10^d];
 
 c = colorbar;
-c.Label.String = 'Log_1_0(Power)';
-set(ax,YDir='normal', YTick=fun(major_ticks), YTickLabel=major_ticks, TickDir='out');
-ax.YAxis.MinorTickValues = fun(minor_ticks);
-ax.YMinorTick = 'on';
 
-xlabel('Time (s)');
-ylabel('F (Hz)');
+set(ax,YDir='normal', YTick=plot_f_ind, YTickLabel=plot_f, TickDir='out');
+ax.YAxis.MinorTickValues = [5.5,10,20];
+ax.YMinorTick = 'on';
 
 %%
 
@@ -87,35 +90,4 @@ function W = morlet_wavelet(t,sigma_tc)
     W = (sigma_tc*sqrt(pi))^(-0.5) * exp( -(t.^2)/(2*sigma_tc^2) ) .* exp(1i*2*pi*t);
 end
 
-function [major_ticks, minor_ticks] = log_ticks(fwin)
-    % Frequency range
-    fmin = fwin(1);
-    fmax = fwin(2);
-    
-    % Determine the decades covering the range
-    decades = floor(log10(fmin)) : ceil(log10(fmax));
-    
-    % Initialize arrays
-    major_ticks = [];
-    minor_ticks = [];
-    
-    for d = decades
-        % Minor ticks: 1-9 * 10^d
-        candidates = (1:9) * 10^d;
-        
-        % Only keep within range
-        candidates = candidates(candidates >= fmin & candidates <= fmax);
-        
-        % Add to minor ticks
-        minor_ticks = [minor_ticks, candidates];
-        
-        % Major tick: exact powers of 10
-        if 10^d >= fmin && 10^d <= fmax
-            major_ticks = [major_ticks, 10^d];
-        end
-    end
-    
-    % Remove major ticks from minor ticks
-    minor_ticks = setdiff(minor_ticks, major_ticks);
-end
-end
+% end

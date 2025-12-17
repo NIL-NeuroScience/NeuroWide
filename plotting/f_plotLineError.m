@@ -1,15 +1,21 @@
-function f_plotLineError(varargin)
+function f_plotLineError(x,y,error,varargin)
 
-x = varargin{1}(:);
-y = varargin{2}(:);
-error = varargin{3}(:);
+x = x(:);
+y = y(:);
+[h,w] = size(error);
+
+if h == 1 & w > 1
+    error = error(:);
+end
 
 p = inputParser;
 addParameter(p,'color',[]);
+addParameter(p,'ylabel',[]);
+addParameter(p,'xlim',[]);
 addParameter(p,'lineWidth',2);
 addParameter(p,'log',0);
 
-parse(p,varargin{4:end});
+parse(p,varargin{:});
 
 if isempty(p.Results.color)
     color = get(groot,'defaultAxesColorOrder');
@@ -27,7 +33,19 @@ if p.Results.log
 end
 
 hold on;
-fill([x;flipud(x)],[(y+error);flipud(y-error)],color,FaceAlpha=0.3,EdgeColor='none');
+if numel(error) == numel(x)
+    fill([x;flipud(x)],[(y+error);flipud(y-error)],color,FaceAlpha=0.3,EdgeColor='none');
+else
+    fill([x;flipud(x)],[error(:,2);flipud(error(:,1))],color,FaceAlpha=0.3,EdgeColor='none');
+end
 plot(x,y,Color=color,LineWidth=p.Results.lineWidth);
+
+if ~isempty(p.Results.ylabel)
+    ylabel(p.Results.ylabel);
+end
+
+if ~isempty(p.Results.xlim)
+    xlim(p.Results.xlim);
+end
 
 end
