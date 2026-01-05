@@ -1,4 +1,3 @@
-function filt = f_bpf(sig,fr,fs,dim)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                               f_bpf
 % author - Brad Rauscher
@@ -17,6 +16,8 @@ function filt = f_bpf(sig,fr,fs,dim)
 %   filt: filtered signal with the same size as sig.
 % 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function filt = f_bpf(sig,fr,fs,dim)
 
 if nargin < 4
     dim = 1;
@@ -61,3 +62,5 @@ else
 end
 
 filt = permute(filt,inv_dims);
+
+end

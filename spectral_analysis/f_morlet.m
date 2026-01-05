@@ -81,6 +81,8 @@ ax.YMinorTick = 'on';
 xlabel('Time (s)');
 ylabel('F (Hz)');
 
+box off;
+
 %%
 
 function W = morlet_wavelet(t,sigma_tc)
