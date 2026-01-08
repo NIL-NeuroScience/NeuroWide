@@ -1,3 +1,16 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% f_470HD %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Hemodynamic correction code for green fluorescence channel
+%
+% INPUTS:
+%   gfp: intensity of green fluorescence channel
+%   HbO: estimated change in [HbO]
+%   HbR: estimated change in [HbR]
+%
+% OUTPUTS:
+%   gfp: Delta F/F of green fluorescence channel
+%   gfp_HD: hemodynamic corrected Delta F/F of green fluorescence channel
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 function [gfp,gfp_HD] = f_470HD(gfp,HbO,HbR)
 
 if nargin > 1
