@@ -1,4 +1,3 @@
-function [refBM, refParcellation, refMasks] = f_loadRefAllen(varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                         f_loadRefAllen
 % author - Brad Rauscher (created Dec/10/2025)
@@ -16,7 +15,9 @@ function [refBM, refParcellation, refMasks] = f_loadRefAllen(varargin)
 % 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% handle inputs
+function [refBM, refParcellation, refMasks] = f_loadRefAllen(varargin)
+
+% handle inputs
 
 p = inputParser;
 addParameter(p,'hem',0);
