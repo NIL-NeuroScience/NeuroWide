@@ -5,7 +5,6 @@ function [xcorr,lag] = f_hemLag_dT(sig1,sig2,fs,lagwin,mask)
 % sig2 = data.rfp_HD;
 % fs = 10;
 % lagwin = [-5 5];
-%
 
 dim = size(sig1);
 

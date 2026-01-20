@@ -8,29 +8,33 @@
 % (t0,tauA,tauB).
 % 
 % INPUTS: f_1xIRF_varWeights(HbT, Ca, win, brain_mask, _)
-%   HbT - HbT matrix
-%   Ca - Ca matrix
-%   win - window to use for IRF kernel (frames) [t1 t2]
-%   brain_mask - mask of brain exposure (2D NaN image). Leave empty if no
+%   HbT: HbT matrix
+%   Ca: Ca matrix
+%   win: window to use for IRF kernel (frames) [t1 t2]
+%   brain_mask: mask of brain exposure (2D NaN image). Leave empty if no
 %       mask is needed
 % 
-% EXTRA PARAMETERS:
-%   ds - downsampling kernel (int; default 1)
-%   maxThreads - maximum number of cores to use (default 4)
-%   initialParams - initial timing parameters to use (default defined 
+% OPTIONAL INPUTS:
+%   ds: downsampling kernel (int; default 1)
+%   maxThreads: maximum number of cores to use (default 4)
+%   initialParams: initial timing parameters to use (default defined 
 %       below)
-%   corrWin - window for performance over time [t1 t2]. Leave empty to not
+%   corrWin: window for performance over time [t1 t2]. Leave empty to not
 %       perform this analysis (default)
-%   method - deconvolution method to use: 'direct' or 'fft' (default)
+%   method: deconvolution method to use: 'direct' or 'fft' (default)
+%   norm: normalizes Ca and HbT matrices
 % 
 % OUTPUTS:
-%   perf - correlation map showing correlation between input HbT and
+%   r: correlation map showing correlation between input HbT and
 %       predicted HbT
-%   IRF - estimated IRFs across the cortex
-%   outParams - output parameters including t0, tauA, tauB, A, and B
+%   IRF: estimated IRFs across the cortex
+%   outParams: output parameters including t0, tauA, tauB, A, and B
+%   r_dt: correlation matrix between 'HbT' and 'pred_HbT'
+%   pred_HbT: predicted HbT values using 'IRF'
+% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [perf, IRF, outParams, corrGram, pred_HbT] = ...
+function [r, IRF, outParams, r_dt, pred_HbT] = ...
     f_1xIRF_varWeights(HbT, Ca, win, brain_mask, varargin)
 
 % parse additional inputs
@@ -70,7 +74,7 @@ ds_brain_mask = f_downsample(brain_mask, p.Results.ds);
 nanIdx = ~isnan(ds_brain_mask(:));
 N = sum(nanIdx);
 
-[H, W, T] = size(dsHbT);
+T = size(dsHbT, 3);
 dsHbT = reshape(dsHbT, [], T);
 dsCa = reshape(dsCa, [], T);
 
@@ -88,22 +92,10 @@ if string(p.Results.method) == "direct"
     % create design matrices
     n_IRF = (win(2) - win(1)) + 1;
     
-    Ca_mat = zeros(T, N, n_IRF);
+    Ca_mat = f_2Dconvmtx(dsCa, n_IRF);
+    Ca_mat = Ca_mat(1 - win(1) : end - win(2), :, :);
+    Ca_mat = permute(Ca_mat, [2, 3, 1]); % n_IRF x N x T
     
-    T = size(dsCa, 1);
-    l_irf = range(win) + 1;
-    idx_irf = win(1) : win(2);
-    
-    i1 = abs(min([idx_irf; zeros(1, numel(idx_irf))], [], 1)) + 1;
-    i2 = T - max([idx_irf; zeros(1, numel(idx_irf))], [], 1);
-    i3 = max([idx_irf; zeros(1, numel(idx_irf))], [], 1) + 1;
-    i4 = T - i1 + 1;
-    
-    for v = 1 : l_irf
-        Ca_mat(i3(v) : i4(v), :, v) = dsCa(i1(v) : i2(v), :);
-    end
-    
-    Ca_mat = permute(Ca_mat, [3, 2, 1]);
     design_HbT = permute(dsHbT, [3, 2, 1]);
     
     % optimize initial parameters
@@ -176,7 +168,6 @@ else
 end
 
 % pixel-wise LR
-
 hrf1 = f_alpha_IRF(params(1), params(2), params(3), 1, 0, win);
 hrf2 = f_alpha_IRF(params(1), params(2), params(3), 0, -1, win);
 
@@ -192,6 +183,7 @@ convNeg = f_3Dconvolve(normCa, hrf2, win, brain_mask);
 
 LR = f_hemRegress(normHbT, cat(4, convPos, convNeg), brain_mask);
 
+% save params
 outParams = struct;
 outParams.t0 = params(1);
 outParams.tauA = params(2);
@@ -202,16 +194,17 @@ outParams.B = -LR(:, :, 2);
 % recalculate IRF
 dim = size(Ca);
 
-IRF = f_alpha_IRF(params(1), params(2), params(3), outParams.A(:)', outParams.B(:)', win)';
+IRF = f_alpha_IRF(params(1), params(2), params(3), outParams.A(:)', ...
+    outParams.B(:)', win)';
 IRF = reshape(IRF, dim(1), dim(2), []);
 
 % calculate performance
 pred_HbT = convPos .* LR(:, :, 1) + convNeg .* LR(:, :, 2);
 
-perf = f_corr(HbT, pred_HbT, 3);
+r = f_corr(HbT, pred_HbT, 3);
 
 if ~isempty(p.Results.corrWin)
-    corrGram = f_HemCorrGram(HbT, pred_HbT, p.Results.corrWin);
+    r_dt = f_HemCorrGram(HbT, pred_HbT, p.Results.corrWin);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% EXTRA FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -238,7 +231,7 @@ end
 % double gamma function definition
 function IRF = f_alpha_IRF(t0, tau1, tau2, A, B, range)
     hrf_l = range;
-    tr = (((hrf_l(1) : hrf_l(2))) - t0)';
+    tr = ((hrf_l(1) : hrf_l(2)) - t0)';
     D = (tr ./tau1).^3 .* exp(-tr ./ tau1);
     D(tr<0) = 0;
     C = (tr ./ tau2).^3 .* exp(-tr ./ tau2);
