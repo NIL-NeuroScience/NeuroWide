@@ -1,33 +1,58 @@
-function [rMat,residual] = f_hemRegress(sig,reg,brain_mask)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                            f_hemRegress
+% author - Brad Rauscher (created 2024)
+% 
+% Solves the regression problem Y = A * X for each pixel in 'sig1'.
+% 
+% INPUTS: f_hemRegress(sig, reg, brain_mask)
+%   Y: first signal
+%   X: second signal. Can contain multiple regressors in dimension 4
+%   brain_mask: mask of brain exposure (2D NaN image). Leave empty if no
+%       mask is needed
+% 
+% OUTPUTS:
+%   A: regression coefficients
+%   residual: Y - A * X
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-dim = size(sig);
+function [A, residual] = f_hemRegress(Y, X, brain_mask)
 
-sig = reshape(sig,[],dim(3));
-reg = reshape(reg,dim(1)*dim(2),dim(3),[]);
-nanIdx = isnan(brain_mask(:));
+% handle inputs
+dim = size(Y);
 
-sig = sig(~nanIdx,:);
-sig = sig';
-reg = reg(~nanIdx,:,:);
-reg = permute(reg,[2 3 1]);
-
-N = size(sig,2);
-
-rMat = zeros(N,size(reg,2));
-
-for idx = 1:N
-    rMat(idx,:) = reg(:,:,idx) \ sig(:,idx);
+if isempty(brain_mask)
+    nanIdx = true(dim(1) * dim(2), 1);
+else
+    nanIdx = ~isnan(brain_mask(:));
 end
 
-residual = squeeze(sum(reg.*permute(rMat,[3 2 1]),2));
-residual = (sig-residual)';
+% reshape X and Y
+N_channels = size(X, 4);
 
-nanMat = NaN(dim(1)*dim(2),dim(3));
-nanMat(~nanIdx,:) = residual;
-residual = reshape(nanMat,dim(1),dim(2),dim(3));
+Y = reshape(Y, dim(1) * dim(2), dim(3));
+X = reshape(X, dim(1) * dim(2), dim(3), N_channels);
 
-nanMat = NaN(dim(1)*dim(2),size(reg,2));
-nanMat(~nanIdx,:) = rMat;
-rMat = reshape(nanMat,dim(1),dim(2),[]);
+Y = Y(nanIdx, :)';
+X = X(nanIdx, :, :);
+X = permute(X, [2, 3, 1]);
 
-% residual = sig - sum(permute(rMat,[1 2 4 3]).*reg,4);
+% estimate A
+A = zeros(sum(nanIdx), N_channels);
+
+for i = 1 : sum(nanIdx)
+    A(i, :) = X(:, :, i) \ Y(:, i);
+end
+
+% calculate residual and reshape outputs to original dimensions
+residual = squeeze(sum(X .* permute(A, [3, 2, 1]), 2));
+residual = Y - residual;
+
+filler = NaN(dim(1) * dim(2), dim(3));
+filler(nanIdx, :) = residual';
+
+residual = reshape(filler, dim(1), dim(2), dim(3));
+
+filler = NaN(dim(1) * dim(2), N_channels);
+filler(nanIdx, :) = A;
+A = reshape(filler, dim(1), dim(2), N_channels);
