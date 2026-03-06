@@ -3,13 +3,14 @@ function [data,Signals,brain_mask,parcellation,vessel_mask,dataIn,...
 
 %% parse inputs
 p = inputParser;
-addParameter(p,'loadDir','bcraus/HRF/1P');
+addParameter(p,'loadDir','/projectnb/devorlab/bcraus/HRF/1P');
 addParameter(p,'behCam',false);
 addParameter(p,'range',[]);
+addParameter(p,'cores',4);
 parse(p,varargin{:});
 
 %% organize files
-files.Root_Folder = fullfile('/projectnb/devorlab',p.Results.loadDir);
+files.Root_Folder = p.Results.loadDir;
 files.Root_Folder = fullfile(files.Root_Folder,Date,Mouse);
 files.h5 = fullfile(files.Root_Folder,'processed',sprintf('run%04i.h5',Run));
 files.dataIn = fullfile(files.Root_Folder,'dataIn.mat');
@@ -103,6 +104,10 @@ data = struct;
 tmp = cell(N,1);
 
 h5 = files.h5;
+
+if isempty(gcp('nocreate'))
+    parpool(p.Results.cores);
+end
 
 if ~isempty(p.Results.range)
     info = h5info(files.h5,dataOrder{1});

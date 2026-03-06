@@ -1,8 +1,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
+%
 %           Single photon data postprocessing and analysis
-% 
+%
 % Secondary processing script for widefield fluorescence and intrinsic
 % imaging data. Creates brain and vessel masks, estimates pupil diameter,
 % whisking, and movement, and performs preliminary analysis between the
@@ -34,12 +34,8 @@ addParameter(p,'load_dir','bcraus/HRF/1P');
 addParameter(p,'save_dir','bcraus/HRF/1P');
 addParameter(p,'plotVisible',false);
 addParameter(p,'allenRef',0);
-addParameter(p,'num_cores',4);
 
 parse(p,varargin{:});
-
-delete(gcp('nocreate'));
-parpool('local',p.Results.num_cores);
 
 %% organize files
 
@@ -210,15 +206,8 @@ for Run = list_runs
     if p.Results.behCam
     % behavior extraction
         cam_folder = fullfile(files.camera,sprintf('Run%02i',Run));
-        cam_images = dir([cam_folder,'/*.tiff']);
+        cam_images = dir(cam_folder);cam_images(1:2) = [];
         cam_images = fullfile({cam_images.folder},{cam_images.name});
-
-        frame_num = regexp(cam_images,'\d+','match');
-        frame_num = cellfun(@(x) str2double(x{end}), frame_num);
-        
-        [~,order] = sort(frame_num);
-        
-        cam_images = cam_images(order);
     
         % pupil
         Signals.pupil = f_processPupil(cam_images,behaviorROIs);
@@ -248,7 +237,7 @@ for Run = list_runs
         end
     end
     if run_bins == 0
-        run_bins = 1;
+        run_
         run_idx{1} = 1:numel(Signals.t);
     end
     % Overview plots
