@@ -51,7 +51,7 @@ masks = masks(mask_all(:), :);
 sig = reshape(sig, dim(1) * dim(2), dim(3));
 sig = sig(mask_all(:), :)';
 
-% calculate coherence of each column in 'sig1' and 'sig2'
+% calculate spectra of each column in 'sig1' and 'sig2'
 params = struct;
 params.Fs = fs;
 params.tapers = p.Results.tapers;
