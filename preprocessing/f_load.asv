@@ -12,26 +12,15 @@
 %   Mouse: mouse ID
 %   Date: session date
 %   Runs: list of run to load
-%   idx: index of which signals to load [rfp, rfp_HD, gfp, gfp_HD, HbO,
-%       HbR] (loading HbO and HbR will automatically calculate HbT)
+%   idx: index of which signals to load [rfp, rfp_HD, gfp, gfp_HD, Hb
 % 
 % EXTRA PARAMETERS:
-%   load_dir: directory to load from
-%   behCam: nothing (to be added in the future)
-%   range: frame indices to load
-%   cores: number of cores to use to load data
-% 
-% OUTPUTS:
-%   data: contains processed widefield videos
-%   Signals: contains behavioral measurements
-%   brain_mask: mask of the window exposure
-%   parcellation: structure containing individual allen atlas regions
-%   vessel_mask: mask of large pial vessels
-%   dataIn: info about runs
-%   settings: acquisition settings (contains sampling rate)
-%   files: associated files
-%   digitalInput: acquisition timing data
-% 
+%   behCam: true if behavior was recorded (default = true)
+%   newROIs: true to define new ROIs (default = false)
+%   extraProcessing: true to perform extra analysis (default = true)
+%   GRAB: description of gfp channel (default = 'none')
+%   load_dir: directory to load from (default = 'bcraus/HRF/1P')
+%   save_dir: directory to save to (default = 'bcraus/HRF/1P')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [data,Signals,brain_mask,parcellation,vessel_mask,dataIn,...
@@ -39,7 +28,7 @@ function [data,Signals,brain_mask,parcellation,vessel_mask,dataIn,...
 
 %% parse inputs
 p = inputParser;
-addParameter(p,'load_dir','/projectnb/devorlab/bcraus/HRF/1P');
+addParameter(p,'loadDir','/projectnb/devorlab/bcraus/HRF/1P');
 addParameter(p,'behCam',false);
 addParameter(p,'range',[]);
 addParameter(p,'cores',4);
