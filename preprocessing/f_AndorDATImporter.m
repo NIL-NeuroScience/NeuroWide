@@ -1,4 +1,4 @@
-function rawImageChannels=f_AndorDATImporter(folderIn,settings)
+function [rawImageChannels, metadata] = f_AndorDATImporter(folderIn,settings)
 
 %ANDOR SOLIS SPOOL.DAT IMPORT INTO MAtLAB
 % Martin Thunemann, 2023-01-23, Version 2
@@ -254,6 +254,7 @@ end
 clear tmp* i*
 if nargout==0;figure();imagesc(combinedImageMean);axis image off;colorbar;colormap gray;implay(combinedImageNorm);return;end
 end
+
 %%
 function out = ini2struct(FileName)
 %modified from https://www.mathworks.com/matlabcentral/fileexchange/17177-ini2struct

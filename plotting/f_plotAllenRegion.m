@@ -1,6 +1,4 @@
-function f_plotAllenRegion(varargin)
-
-% region,side,parcellation,mask
+function f_plotAllenRegion(region,varargin)
 
 p = inputParser;
 addParameter(p,'mask',[]);
@@ -8,11 +6,10 @@ addParameter(p,'parcellation',[]);
 addParameter(p,'color',[0, 0, 0]);
 addParameter(p,'linewidth',1);
 
-parse(p,varargin{3:end});
+parse(p,varargin{2:end});
 
-region = varargin{1};
-if numel(varargin) > 1
-    side = varargin{2};
+if numel(varargin) > 0
+    side = varargin{1};
 else
     side = [];
 end
@@ -22,7 +19,7 @@ mask = p.Results.mask;
 color = p.Results.color;
 linewidth = p.Results.linewidth;
 
-allen_path = fullfile(f_path,'Figures/plot_types/refAllen.mat');
+allen_path = fullfile(f_path,'plotting/refAllen.mat');
 
 if isempty(parcellation) && isempty(mask)
     parcellation = load(allen_path);

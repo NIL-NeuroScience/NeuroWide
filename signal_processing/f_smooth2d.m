@@ -22,8 +22,7 @@ filtim = (((1 : nrows) - ceil((nrows + 1) / 2))' * ones(1, ncols)).^2 + ...
     (ones(nrows, 1) * (1 : ncols) - ceil((ncols + 1) / 2)).^2;
 
 filtim = exp(-smooth^2 * filtim / max(filtim(:)));
-tmp = fftshift(fftshift(fft(fft(squeeze(sig(:, :, :)), [], 1), ...
-    [], 2), 2), 1);
+tmp = fftshift(fftshift(fft(fft(squeeze(sig), [], 1), [], 2), 2), 1);
 
 for fn = 1 : size(tmp, 3)
   tmp(:, :, fn) = squeeze(tmp(:, :, fn)) .* filtim;
