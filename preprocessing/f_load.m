@@ -46,7 +46,7 @@ addParameter(p,'cores',4);
 parse(p,varargin{:});
 
 %% organize files
-files.Root_Folder = p.Results.loadDir;
+files.Root_Folder = p.Results.load_dir;
 files.Root_Folder = fullfile(files.Root_Folder,Date,Mouse);
 files.h5 = fullfile(files.Root_Folder,'processed',sprintf('run%04i.h5',Run));
 files.dataIn = fullfile(files.Root_Folder,'dataIn.mat');

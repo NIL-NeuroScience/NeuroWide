@@ -38,6 +38,7 @@ metadata.order = 'F';
 metadata.axes = {'H', 'W', 'C', 'T'};
 metadata.units = 'intensity';
 metadata.channel_order = channels;
+metadata.rotation = 180;
 
 jsonStr = jsonencode(metadata', PrettyPrint=true);
 fid = fopen(meta_path, 'w');
