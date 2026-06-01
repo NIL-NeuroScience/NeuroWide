@@ -2,7 +2,7 @@ function data = f_load_compressed_mp4(path)
 
 folder = f_path();
 
-pyenv('Version',fullfile(folder,'.venv/bin/python'));
+pyenv('Version', '/projectnb/devorlab/bcraus/envs/.venv/bin/python');
 imageio = py.importlib.import_module('imageio.v2');
 np = py.importlib.import_module('numpy');
 

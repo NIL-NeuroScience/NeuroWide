@@ -141,7 +141,7 @@ tmp = cell(N,1);
 
 h5 = files.h5;
 
-if isempty(gcp('nocreate'))
+if p.Results.cores > 1 && isempty(gcp('nocreate'))
     parpool(p.Results.cores);
 end
 
@@ -157,8 +157,14 @@ if ~isempty(p.Results.range)
         tmp{i} = h5read(h5,dataOrder{i},start,count);
     end
 else
-    parfor i = 1:N
-        tmp{i} = h5read(h5,dataOrder{i});
+    if p.Results.cores > 1
+        parfor i = 1:N
+            tmp{i} = h5read(h5,dataOrder{i});
+        end
+    else
+        for i = 1:N
+            tmp{i} = h5read(h5,dataOrder{i});
+        end
     end
 end
 

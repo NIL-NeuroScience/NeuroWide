@@ -48,25 +48,62 @@ files.load_dir = fullfile('/projectnb/devorlab',p.Results.load_dir);
 files.save_dir = fullfile('/projectnb/devorlab',p.Results.save_dir);
 files.load_dir = fullfile(files.load_dir,Date,Mouse);
 files.save_dir = fullfile(files.save_dir,Date,Mouse,'DataAnalysis');
-files.dataIn = fullfile(files.load_dir,'dataIn.mat');
+files.dataIn = fullfile(files.load_dir,'dataIn');
 files.triggers = fullfile(files.load_dir,'Triggers');
 files.images = fullfile(files.save_dir,'Images');
 files.processed = fullfile(files.load_dir,'processed');
+files.onephoton = fullfile(files.load_dir,'onephoton');
 files.camera = fullfile(files.load_dir,'camera');
 
 [~,~,~,] = mkdir(files.save_dir);
 [~,~,~] = mkdir(files.images);
 
-dataIn = load(files.dataIn);
-dataIn = dataIn.dataIn;
+% check dataIn filetype and load
+if exist([files.dataIn, '.mat'], 'file')
+    files.dataIn = [files.dataIn, '.mat'];
+    dataIn = load(files.dataIn);
+    dataIn = dataIn.dataIn;
+elseif exist([files.dataIn, '.json'], 'file')
+    files.dataIn = [files.dataIn, '.json'];
+    dataIn = jsondecode(fileread(files.dataIn));
+
+    % correct dataIn.template dimensions
+    for i = 1:numel(dataIn)
+        dataIn(i).template = permute(dataIn(i).template,[2,3,1]);
+    end
+end
+
+%% check if data is stored as .dat or .bin
+
+list_raw_runs = dir(files.onephoton);
+list_raw_runs = {list_raw_runs(3:end).name};
+
+if exist(fullfile(files.onephoton,list_raw_runs{1},'data.bin'),'file')
+    data_bin = true;
+else
+    data_bin = false;
+end
 
 %% find runs
-list_runs = dir(files.processed);
-list_runs = {list_runs(3:end).name};
-list_runs = cellfun(@(f) str2double(f(4:7)),list_runs);
+if data_bin
+    list_runs = dir(files.onephoton);
+    list_runs = {list_runs(3:end).name};
+    list_runs = cellfun(@(f) str2double(f(4:5)),list_runs);
+else
+    list_runs = dir(files.processed);
+    list_runs = {list_runs(3:end).name};
+    list_runs = cellfun(@(f) str2double(f(4:7)),list_runs);
+end
 
 if ~isempty(Runs)
     list_runs = intersect(list_runs,Runs);
+end
+
+cam_folder = fullfile(files.camera,sprintf('Run%02i',list_runs(1)));
+if exist(cam_folder, 'dir')
+    beh_mp4 = false;
+elseif exist([cam_folder,'.mp4'], 'file')
+    beh_mp4 = true;
 end
 
 %% create brain and behavior masks
@@ -107,12 +144,30 @@ if p.Results.newROIs || ~ROI_exist
 
     if p.Results.behCam
         cam_folder = fullfile(files.camera,sprintf('Run%02i',list_runs(1)));
-        cam_images = dir(cam_folder);cam_images(1:2) = [];
-        cam_images = fullfile({cam_images.folder},{cam_images.name});
+        if exist(cam_folder, 'dir')
+            beh_mp4 = false;
 
-        imgPath = cam_images{round((numel(cam_images))/2)};
-        behaviorROIs = f_drawBehaviorROIs(imgPath);
-        clear cam_folder cam_images imgPath;
+            cam_images = dir(cam_folder);cam_images(1:2) = [];
+            cam_images = fullfile({cam_images.folder},{cam_images.name});
+
+            imgPath = cam_images{round((numel(cam_images))/2)};
+
+            t = Tiff(imgPath,'r');
+            imageData = im2uint8(read(t));
+
+            behaviorROIs = f_drawBehaviorROIs(imageData);
+            clear cam_folder cam_images imgPath t imageData;
+
+        elseif exist([cam_folder,'.mp4'], 'file')
+            beh_mp4 = true;
+            cam_folder = [cam_folder,'.mp4'];
+
+            behCam = f_load_compressed_mp4(cam_folder);
+            imageData = uint8(behCam(:,:,round(size(behCam,3)/2)));
+            
+            behaviorROIs = f_drawBehaviorROIs(imageData);
+            clear cam_folder behCam imageData
+        end
         
         save(fullfile(files.save_dir,'ROIs.mat'),'behaviorROIs','-append');        
     end
@@ -139,20 +194,28 @@ if p.Results.newROIs || ~allen_exist
         end
     end
 
-    importSettings.mp = 1;
-    importSettings.cores= 4;
-    importSettings.doNorm = 0;
-    importSettings.doCat=0;
-    importSettings.nImport = 0;
-    importSettings.nChannels = numel(LEDs);
-    
-    rawData = f_AndorDATImporter(fullfile(files.load_dir,'onephoton',sprintf('Run%02i',list_runs(1))),importSettings);
-    rawData = std(rawData(:,:,:,rfp_idx),0,3);
+    if data_bin
+        rawData = data_1P(fullfile(files.onephoton,sprintf('Run%02i',list_runs(1))));
+        rotation = rawData.meta.rotation;
+        rawData = std(rawData.raw_data(:,:,:,rfp_idx),0,3);
 
-    rotation = dataIn(1).rotation;
+        parcellation = f_AllenAtlas(rawData,brain_mask,hem);
+    else
+
+        importSettings.mp = 1;
+        importSettings.cores= 4;
+        importSettings.doNorm = 0;
+        importSettings.doCat=0;
+        importSettings.nImport = 0;
+        importSettings.nChannels = numel(LEDs);
+        
+        rawData = f_AndorDATImporter(fullfile(files.onephoton,sprintf('Run%02i',list_runs(1))),importSettings);
+        rawData = std(rawData(:,:,:,rfp_idx),0,3);
     
-    parcellation = f_AllenAtlas(imrotate(rawData,rotation),brain_mask,hem);
-    
+        rotation = dataIn(1).rotation;
+        
+        parcellation = f_AllenAtlas(imrotate(rawData,rotation),brain_mask,hem);
+    end
     save(fullfile(files.save_dir,'ROIs.mat'),'parcellation','rotation','-append');
 end
 
@@ -170,30 +233,55 @@ for Run = list_runs
     settings = settings.settings;
 
     % load h5 files
-    files.h5 = fullfile(files.processed,sprintf('run%04i.h5',Run));
-
     LEDs = [dataIn(dataIn_idx).led(:).type];
     rfp_exist = sum(LEDs==565);
     gfp_exist = sum(LEDs==470);
+    
+    if data_bin
+        files.bin = fullfile(files.onephoton,sprintf('Run%02i',Run));
+        rawData = data_1P(files.bin);
 
-    masks = sum(parcellation.Masks,4);
+        masks = sum(parcellation.Masks,4);
+        Signals = struct;
 
-    Signals = struct;
-    if gfp_exist
-        gfp_HD = 100*h5read(files.h5,'/gfp/normHD');
-        gfp = 100*h5read(files.h5,'/gfp/norm');
-        Signals.gfp_HD = f_parcellate(gfp_HD,masks.*vessel_mask);
-        Signals.gfp = f_parcellate(gfp,masks.*vessel_mask);
+        if gfp_exist
+            gfp_HD = 100*rawData.gfp_HD;
+            gfp = 100*rawData.gfp;
+            Signals.gfp_HD = f_parcellate(gfp_HD,masks.*vessel_mask);
+            Signals.gfp = f_parcellate(gfp,masks.*vessel_mask);
+        end
+        if rfp_exist
+            rfp_HD = 100*rawData.rfp_HD;
+            rfp = 100*rawData.rfp;
+            Signals.rfp_HD = f_parcellate(rfp_HD,masks.*vessel_mask);
+            Signals.rfp = f_parcellate(rfp,masks.*vessel_mask);
+        end
+        HbO = 1e6*rawData.HbO;
+        HbR = 1e6*rawData.HbR;
+        HbT = 1e6*rawData.HbT;
+    else
+        files.h5 = fullfile(files.processed,sprintf('run%04i.h5',Run));
+    
+        masks = sum(parcellation.Masks,4);
+    
+        Signals = struct;
+        if gfp_exist
+            gfp_HD = 100*h5read(files.h5,'/gfp/normHD');
+            gfp = 100*h5read(files.h5,'/gfp/norm');
+            Signals.gfp_HD = f_parcellate(gfp_HD,masks.*vessel_mask);
+            Signals.gfp = f_parcellate(gfp,masks.*vessel_mask);
+        end
+        if rfp_exist
+            rfp_HD = 100*h5read(files.h5,'/rfp/normHD');
+            rfp = 100*h5read(files.h5,'/rfp/norm');
+            Signals.rfp_HD = f_parcellate(rfp_HD,masks.*vessel_mask);
+            Signals.rfp = f_parcellate(rfp,masks.*vessel_mask);
+        end
+        HbO = 1e6*h5read(files.h5,'/hemodynamics/HbO');
+        HbR = 1e6*h5read(files.h5,'/hemodynamics/Hb');
+        HbT = HbO+HbR;
     end
-    if rfp_exist
-        rfp_HD = 100*h5read(files.h5,'/rfp/normHD');
-        rfp = 100*h5read(files.h5,'/rfp/norm');
-        Signals.rfp_HD = f_parcellate(rfp_HD,masks.*vessel_mask);
-        Signals.rfp = f_parcellate(rfp,masks.*vessel_mask);
-    end
-    HbO = 1e6*h5read(files.h5,'/hemodynamics/HbO');
-    HbR = 1e6*h5read(files.h5,'/hemodynamics/Hb');
-    HbT = HbO+HbR;
+
     Signals.HbO = f_parcellate(HbO,masks);
     Signals.HbR = f_parcellate(HbR,masks);
     Signals.HbT = f_parcellate(HbT,masks);
@@ -206,20 +294,25 @@ for Run = list_runs
     Signals.Acc = Signals.Acc(round(sampling_win/2):sampling_win:end);
 
     Signals.t = 1/settings.fs:1/settings.fs:settings.totalTime;
-
+    
     if p.Results.behCam
     % behavior extraction
-        cam_folder = fullfile(files.camera,sprintf('Run%02i',Run));
-        cam_images = dir([cam_folder,'/*.tiff']);
-        cam_images = fullfile({cam_images.folder},{cam_images.name});
-
-        frame_num = regexp(cam_images,'\d+','match');
-        frame_num = cellfun(@(x) str2double(x{end}), frame_num);
-        
-        [~,order] = sort(frame_num);
-        
-        cam_images = cam_images(order);
+        if beh_mp4
+            cam_folder = fullfile(files.camera,sprintf('Run%02i',Run));
+            cam_folder = [cam_folder,'.mp4'];
+            cam_images = f_load_compressed_mp4(cam_folder);
+        else
+            cam_folder = fullfile(files.camera,sprintf('Run%02i',Run));
+            cam_images = dir([cam_folder,'/*.tiff']);
+            cam_images = fullfile({cam_images.folder},{cam_images.name});
     
+            frame_num = regexp(cam_images,'\d+','match');
+            frame_num = cellfun(@(x) str2double(x{end}), frame_num);
+            
+            [~,order] = sort(frame_num);
+            
+            cam_images = cam_images(order);
+        end
         % pupil
         Signals.pupil = f_processPupil(cam_images,behaviorROIs);
     
