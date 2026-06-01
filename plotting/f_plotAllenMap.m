@@ -47,8 +47,15 @@ end
 
 imAlpha = ~isnan(img);
 
+y_crop = find(sum(imAlpha, 2));
+y_crop = y_crop(1):y_crop(end);
+x_crop = find(sum(imAlpha, 1));
+x_crop = x_crop(1):x_crop(end);
+
+imAlpha = imAlpha(y_crop,x_crop);
+
 if p.Results.plot
-    fig_img = imagesc(img,AlphaData=imAlpha);
+    fig_img = imagesc(img(y_crop,x_crop),AlphaData=imAlpha);
     axis image off;
     if ~isempty(cmp)
         ax = gca;

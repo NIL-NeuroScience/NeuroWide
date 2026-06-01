@@ -11,7 +11,9 @@ end
 p = inputParser;
 addParameter(p,'color',[]);
 addParameter(p,'ylabel',[]);
+addParameter(p,'xlabel',[]);
 addParameter(p,'xlim',[]);
+addParameter(p,'ylim',[]);
 addParameter(p,'lineWidth',2);
 addParameter(p,'log',0);
 
@@ -44,8 +46,15 @@ if ~isempty(p.Results.ylabel)
     ylabel(p.Results.ylabel);
 end
 
+if ~isempty(p.Results.xlabel)
+    xlabel(p.Results.xlabel);
+end
+
 if ~isempty(p.Results.xlim)
     xlim(p.Results.xlim);
+end
+if ~isempty(p.Results.ylim)
+    ylim(p.Results.ylim);
 end
 
 end

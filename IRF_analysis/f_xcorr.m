@@ -34,7 +34,7 @@ Y = fft(sig2, m2, 1);
 c1 = ifft(X .* conj(Y), [], 1, 'symmetric');
 
 % correctly index cross-correlation
-r = [c1(m2 - mxl + (1 : mxl), :); c1(1 : mxl + 1, :)];
+r = [c1(m2 - mxl + (1 : mxl), :, :); c1(1 : mxl + 1, :, :)];
 
 % rescale to pearson's coefficient
 cxx0 = sum(sig1.^2, 1);
