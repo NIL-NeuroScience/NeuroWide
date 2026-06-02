@@ -5,7 +5,7 @@ templateLim = prctile(template(:), [1,99]);
 rFig = figure;
 imagesc(template);
 axis image off;
-colormap cmpinf;
+colormap(NeuroWide.cmp.inferno);
 clim(templateLim);
 
 hem = input('Number of hemispheres? (2-both, 1-left, 0-right)');

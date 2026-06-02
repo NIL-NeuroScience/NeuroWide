@@ -1,8 +1,8 @@
 function data = loadCompressedMp4(path)
 
-folder = f_path();
+ops = NeuroWide.defineOps();
 
-pyenv('Version', '/projectnb/devorlab/bcraus/envs/.venv/bin/python');
+pyenv('Version', ops.pyenv_path);
 imageio = py.importlib.import_module('imageio.v2');
 np = py.importlib.import_module('numpy');
 
