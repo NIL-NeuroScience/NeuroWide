@@ -62,10 +62,10 @@ tau1 = p.Results.initialParam(3);
 tau2 = p.Results.initialParam(4);
 
 % downsample and reshape data
-dsHbT = NeuroWide.process.downsample(HbT, p.Results.ds);
-dsCa = NeuroWide.process.downsample(Ca, p.Results.ds);
-dsNE = NeuroWide.process.downsample(NE, p.Results.ds);
-ds_brain_mask = NeuroWide.process.downsample(brain_mask, p.Results.ds);
+dsHbT = NeuroWide.process.downsample2d(HbT, p.Results.ds);
+dsCa = NeuroWide.process.downsample2d(Ca, p.Results.ds);
+dsNE = NeuroWide.process.downsample2d(NE, p.Results.ds);
+ds_brain_mask = NeuroWide.process.downsample2d(brain_mask, p.Results.ds);
 
 nanIdx = ~isnan(ds_brain_mask(:));
 N = sum(nanIdx);

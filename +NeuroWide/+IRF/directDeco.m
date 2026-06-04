@@ -32,10 +32,10 @@ parse(p, varargin{:});
 ds = p.Results.ds;
 
 % downsample and reshape data
-dstoPred = NeuroWide.process.downsample(Y, ds);
-dspredictor = NeuroWide.process.downsample(X, ds);
+dstoPred = NeuroWide.process.downsample2d(Y, ds);
+dspredictor = NeuroWide.process.downsample2d(X, ds);
 
-ds_brain_mask = NeuroWide.process.downsample(brain_mask, ds);
+ds_brain_mask = NeuroWide.process.downsample2d(brain_mask, ds);
 nanIdx = ~isnan(ds_brain_mask(:));
 
 dim = size(dstoPred);
