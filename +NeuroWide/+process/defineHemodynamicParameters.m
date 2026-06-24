@@ -4,7 +4,7 @@ hd.Lambda1 = Lambda1;
 hd.Lambda2 = Lambda2;
 
 tmp1 = NeuroWide.process.getExtinctions([hd.Lambda1 hd.Lambda2]);
-tmp2 = NeuroWide.process.pathlengths([hd.Lambda1 hd.Lambda2]);
+tmp2 = NeuroWide.process.pathlengths([hd.Lambda1 hd.Lambda2], 0.4);
 
 hd.exsLambda1Hb = tmp1(1,2);
 hd.exsLambda1HbO = tmp1(1,1);
