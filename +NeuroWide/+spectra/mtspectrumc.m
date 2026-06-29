@@ -296,7 +296,7 @@ function J=mtfftc(data,tapers,nfft,Fs)
 if nargin < 4; error('Need all input arguments'); end;
 data=change_row_to_column(data);
 [NC,C]=size(data); % size of data
-[NK K]=size(tapers); % size of tapers
+[NK,K]=size(tapers); % size of tapers
 if NK~=NC; error('length of tapers is incompatible with length of data'); end;
 tapers=tapers(:,:,ones(1,C)); % add channel indices to tapers
 data=data(:,:,ones(1,K)); % add taper indices to data

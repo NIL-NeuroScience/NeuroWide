@@ -4,7 +4,7 @@ classdef video
     end
 
     methods
-        function obj = f_video(name, varargin)
+        function obj = video(name, varargin)
             
             p = inputParser;
             addParameter(p, 'fs', 1);
