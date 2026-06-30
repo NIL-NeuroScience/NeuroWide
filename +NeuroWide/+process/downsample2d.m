@@ -17,7 +17,7 @@ function downsampled = downsample2d(sig, ds)
 
 if ds == 1
     downsampled = sig;
-else   
+else
     dim = size(sig);
     if size(dim, 2) == 2
         dim(3) = 1;

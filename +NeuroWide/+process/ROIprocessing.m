@@ -23,7 +23,7 @@
 %   save_dir: directory to save to (default = 'bcraus/HRF/1P')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function ROIprocessing(Mouse,Date,Runs,varargin)
+% function ROIprocessing(Mouse,Date,Runs,varargin)
 %% parse inputs
 p = inputParser;
 addParameter(p,'behCam',true);
@@ -380,99 +380,76 @@ for Run = list_runs
             savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
         end
         
-        %
-        % if p.Results.extraProcessing        
-        %     % calculate coherence
-        %     if gfp_exist
-        %         [allen,overall,f] = f_hemCoherence_allen(gfp_HD(:,:,run_idx{i}),HbT(:,:,run_idx{i}),settings.fs,masks.*vessel_mask,[5 9],1,[0 0.5]);
-        %         iR_metadata.coherence.fr = allen.fr;
-        %         iR_metadata.coherence.allen.C.gfp_HbT = allen.C;
-        %         iR_metadata.coherence.allen.phi.gfp_HbT = allen.phi;
-        %         iR_metadata.coherence.overall.C.gfp_HbT = overall.C;
-        %         iR_metadata.coherence.overall.phi.gfp_HbT = overall.phi;
-        %         img_name = sprintf('coh_gfpHbT_Run%02i_iRun%02i',Run,i);
-        %         exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
-        %         savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
-        %         if rfp_exist
-        %             [allen,overall,f] = f_hemCoherence_allen(gfp_HD(:,:,run_idx{i}),rfp_HD(:,:,run_idx{i}),settings.fs,masks.*vessel_mask,[5 9],1,[0 0.5]);
-        %             iR_metadata.coherence.fr = allen.fr;
-        %             iR_metadata.coherence.allen.C.rfp_gfp = allen.C;
-        %             iR_metadata.coherence.allen.phi.rfp_gfp = allen.phi;
-        %             iR_metadata.coherence.overall.C.rfp_gfp = overall.C;
-        %             iR_metadata.coherence.overall.phi.rfp_gfp = overall.phi;
-        %             img_name = sprintf('coh_rfpgfp_Run%02i_iRun%02i',Run,i);
-        %             exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
-        %             savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
-        %         end
-        %     end
-        %     if rfp_exist
-        %         [allen,overall,f] = f_hemCoherence_allen(rfp_HD(:,:,run_idx{i}),HbT(:,:,run_idx{i}),settings.fs,masks.*vessel_mask,[5 9],1,[0 0.5]);
-        %         iR_metadata.coherence.fr = allen.fr;
-        %         iR_metadata.coherence.allen.C.rfp_HbT = allen.C;
-        %         iR_metadata.coherence.allen.phi.rfp_HbT = allen.phi;
-        %         iR_metadata.coherence.overall.C.rfp_HbT = overall.C;
-        %         iR_metadata.coherence.overall.phi.rfp_HbT = overall.phi;
-        %         img_name = sprintf('coh_rfpHbT_Run%02i_iRun%02i',Run,i);
-        %         exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
-        %         savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
-        %     end
-        % 
-        %     % calculate spectra
-        %     if gfp_exist
-        %         [allen,overall,f] = f_hemSpectra_allen(gfp_HD(:,:,run_idx{i}),settings.fs,[0 settings.fs/2],[5 9],masks.*vessel_mask,1,[0 0.5]);
-        %         iR_metadata.spectra.fr = allen.fr;
-        %         iR_metadata.spectra.allen.gfp = allen.spectra;
-        %         iR_metadata.spectra.overall.gfp = overall.spectra;
-        %         img_name = sprintf('spectra_gfp_Run%02i_iRun%02i',Run,i);
-        %         exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
-        %         savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
-        %     end
-        %     if rfp_exist
-        %         [allen,overall,f] = f_hemSpectra_allen(rfp_HD(:,:,run_idx{i}),settings.fs,[0 settings.fs/2],[5 9],masks.*vessel_mask,1,[0 5]);
-        %         iR_metadata.spectra.fr = allen.fr;
-        %         iR_metadata.spectra.allen.rfp = allen.spectra;
-        %         iR_metadata.spectra.overall.rfp = overall.spectra;
-        %         img_name = sprintf('spectra_rfp_Run%02i_iRun%02i',Run,i);
-        %         exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
-        %         savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
-        %     end
-        %     [allen,overall,f] = f_hemSpectra_allen(HbT(:,:,run_idx{i}),settings.fs,[0 settings.fs/2],[5 9],masks,1,[0 0.5]);
-        %     iR_metadata.spectra.fr = allen.fr;
-        %     iR_metadata.spectra.allen.HbT = allen.spectra;
-        %     iR_metadata.spectra.overall.HbT = overall.spectra;
-        %     img_name = sprintf('spectra_HbT_Run%02i_iRun%02i',Run,i);
-        %     exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
-        %     savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
-        % 
-        %     % calculate xcorr
-        %     if gfp_exist
-        %         [allen,overall,f] = f_hemLag_dT_allen(HbT(:,:,run_idx{i}),gfp_HD(:,:,run_idx{i}),settings.fs,[-5 5],masks.*vessel_mask,1);
-        %         iR_metadata.xcorr.lag = allen.lag;
-        %         iR_metadata.xcorr.allen.HbT_gfp = allen.xcorr;
-        %         iR_metadata.xcorr.overall.HbT_gfp = overall.xcorr;
-        %         img_name = sprintf('xcorr_HbTgfp_Run%02i_iRun%02i',Run,i);
-        %         exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
-        %         savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
-        %         if rfp_exist
-        %             [allen,overall,f] = f_hemLag_dT_allen(gfp_HD(:,:,run_idx{i}),rfp_HD(:,:,run_idx{i}),settings.fs,[-5 5],masks.*vessel_mask,1);
-        %             iR_metadata.xcorr.lag = allen.lag;
-        %             iR_metadata.xcorr.allen.gfp_rfp = allen.xcorr;
-        %             iR_metadata.xcorr.overall.gfp_rfp = overall.xcorr;
-        %             img_name = sprintf('xcorr_gfprfp_Run%02i_iRun%02i',Run,i);
-        %             exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
-        %             savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
-        %         end
-        %     end
-        %     if rfp_exist
-        %         [allen,overall,f] = f_hemLag_dT_allen(HbT(:,:,run_idx{i}),rfp_HD(:,:,run_idx{i}),settings.fs,[-5 5],masks.*vessel_mask,1);
-        %         iR_metadata.xcorr.lag = allen.lag;
-        %         iR_metadata.xcorr.allen.HbT_rfp = allen.xcorr;
-        %         iR_metadata.xcorr.overall.HbT_rfp = overall.xcorr;
-        %         img_name = sprintf('xcorr_HbTrfp_Run%02i_iRun%02i',Run,i);
-        %         exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
-        %         savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
-        %     end
-        % end
+
+        if p.Results.extraProcessing        
+            % calculate coherence
+            if gfp_exist
+                [iR_metadata.coh.C.gfp_HbT, iR_metadata.coh.phi.gfp_HbT, iR_metadata.coh.fr] = NeuroWide.spectra.coherence(Signals.gfp_HD, Signals.HbT, settings.fs);
+
+                img_name = sprintf('coh_gfpHbT_Run%02i_iRun%02i',Run,i);
+                exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
+                savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
+                if rfp_exist
+                    [iR_metadata.coh.C.rfp_gfp, iR_metadata.coh.phi.rfp_gfp] = NeuroWide.spectra.coherence(Signals.rfp_HD, Signals.gfp_HD, settings.fs);
+
+                    img_name = sprintf('coh_rfpgfp_Run%02i_iRun%02i',Run,i);
+                    exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
+                    savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
+                end
+            end
+            if rfp_exist
+                [iR_metadata.coh.C.rfp_HbT, iR_metadata.coh.phi.rfp_HbT] = NeuroWide.spectra.coherence(Signals.rfp_HD, Signals.HbT, settings.fs);
+
+                img_name = sprintf('coh_rfpHbT_Run%02i_iRun%02i',Run,i);
+                exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
+                savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
+            end
+
+            % calculate spectra
+            if gfp_exist
+                [iR_metadata.spc.gfp, iR_metadata.spc.fr] = NeuroWide.spectra.spectra(Signals.gfp_HD, settings.fs);
+
+                img_name = sprintf('spectra_gfp_Run%02i_iRun%02i',Run,i);
+                exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
+                savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
+            end
+            if rfp_exist
+                [iR_metadata.spc.rfp] = NeuroWide.spectra.spectra(Signals.rfp_HD, settings.fs);
+
+                img_name = sprintf('spectra_rfp_Run%02i_iRun%02i',Run,i);
+                exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
+                savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
+            end
+            [iR_metadata.spc.HbT] = NeuroWide.spectra.spectra(Signals.HbT, settings.fs);
+
+            img_name = sprintf('spectra_HbT_Run%02i_iRun%02i',Run,i);
+            exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
+            savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
+
+            % calculate xcorr
+            if gfp_exist
+                iR_metadata.xc.gfp_HbT = NeuroWide.IRF.xcorr(Signals.gfp_HD, Signals.HbT, 5 * settings.fs);
+                iR_metadata.xcorr.lag = -5:1/settings.fs:5;
+
+                img_name = sprintf('xcorr_HbTgfp_Run%02i_iRun%02i',Run,i);
+                exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
+                savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
+                if rfp_exist
+                    iR_metadata.xc.rfp_gfp = NeuroWide.IRF.xcorr(Signals.rfp_HD, Signals.gfp_HD, 5 * settings.fs);
+
+                    img_name = sprintf('xcorr_gfprfp_Run%02i_iRun%02i',Run,i);
+                    exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
+                    savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
+                end
+            end
+            if rfp_exist
+                iR_metadata.xc.rfp_HbT = NeuroWide.IRF.xcorr(Signals.rfp_HD, Signals.HbT, 5 * settings.fs);
+
+                img_name = sprintf('xcorr_HbTrfp_Run%02i_iRun%02i',Run,i);
+                exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
+                savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
+            end
+        end
         if i == 1
             metadata = iR_metadata;
         else
@@ -485,3 +462,22 @@ for Run = list_runs
 end
 
 set(0,'DefaultFigureVisible','on');
+%%
+
+f = plotCoherence(C, phi, fr, parcellation.labelsLR);
+
+%%%%%%%%%%%%%%%% plotting functions %%%%%%%%%%%%%%%%
+
+function f = plotCoherence(C, phi, fr, labels)
+
+f = figure;
+tiledlayout(2, 1);
+
+ax(1) = nexttile();
+imagesc(C', XData=fr);
+set(ax(1), YTick=1:12, YTickLabels=labels, XTick=[]);
+
+end
+
+%%
+% end
