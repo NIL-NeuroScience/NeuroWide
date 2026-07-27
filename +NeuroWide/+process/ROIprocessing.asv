@@ -38,8 +38,8 @@ addParameter(p,'num_cores',4);
 
 parse(p,varargin{:});
 %%
-% delete(gcp('nocreate'));
-% parpool('local',p.Results.num_cores);
+delete(gcp('nocreate'));
+parpool('local',p.Results.num_cores);
 
 %% organize files
 
@@ -298,7 +298,7 @@ for Run = list_runs
         if beh_mp4
             cam_folder = fullfile(files.camera,sprintf('Run%02i',Run));
             cam_folder = [cam_folder,'.tif'];
-            cam_images = double(NeuroWide.io.loadTifStack(cam_folder));
+            cam_images = double(tiffreadVolume(cam_folder));
         else
             cam_folder = fullfile(files.camera,sprintf('Run%02i',Run));
             cam_images = dir([cam_folder,'/*.tiff']);
@@ -406,7 +406,7 @@ for Run = list_runs
             [metadata.spc.rfp] = NeuroWide.spectra.spectra(Signals.rfp_HD, settings.fs);
             
             f = plotSpectra(metadata.spc.rfp, metadata.spc.fr, parcellation.labelsLR, [0, 5]);
-            title('RFP spectra');
+            title('GFP spectra');
             img_name = sprintf('spectra_rfp_Run%02i',Run);
             exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
             savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
@@ -414,7 +414,7 @@ for Run = list_runs
         [metadata.spc.HbT] = NeuroWide.spectra.spectra(Signals.HbT, settings.fs);
         
         f = plotSpectra(metadata.spc.HbT, metadata.spc.fr, parcellation.labelsLR, [0, 5]);
-        title('HbT spectra');
+        title('GFP spectra');
         img_name = sprintf('spectra_HbT_Run%02i',Run);
         exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
         savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);

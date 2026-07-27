@@ -28,10 +28,10 @@ classdef data_1P < handle
             
             if exist(data_path, 'file') && exist(meta_path, 'file')
                 % load metadata from .json
-                fid = fopen(meta_path, 'r');
-                meta = fread(fid, inf, '*char');
-                fclose(fid);
-                obj.meta = jsondecode(meta');
+                % fid = fopen(meta_path, 'r');
+                % meta = fread(fid, inf, '*char');
+                % fclose(fid);
+                obj.meta = jsondecode(fileread(meta_path));
                 
                 % load raw 1P data from .bin
                 fid = fopen(data_path, 'r');
@@ -52,75 +52,96 @@ classdef data_1P < handle
         end
         
         % calculate dF / F
-        function val = rfp(obj)
+        function val = rfp(obj, scale)
+            if nargin == 1
+                scale = 100;
+            end
             if isempty(obj.rfpCache)
                 channel_idx = find(obj.meta.channel_order == 565);
                 obj.rfpCache = obj.raw_data(:,:,:,channel_idx) ./ mean(obj.raw_data(:,:,:,channel_idx), 3) - 1;
             end
-            val = obj.rfpCache;
+            val = obj.rfpCache * scale;
         end
 
-        function val = gfp(obj)
+        function val = gfp(obj, scale)
+            if nargin == 1
+                scale = 100;
+            end
             if isempty(obj.gfpCache)
                 channel_idx = find(obj.meta.channel_order == 470);
                 obj.gfpCache = obj.raw_data(:,:,:,channel_idx) ./ mean(obj.raw_data(:,:,:,channel_idx), 3) - 1;
             end
-            val = obj.gfpCache;
+            val = obj.gfpCache * scale;
         end
 
         % estimate hemodynamics
-        function val = HbO(obj)
+        function val = HbO(obj, scale)
+            if nargin == 1
+                scale = 1e6;
+            end
             if isempty(obj.HbO_Cache)
                 channel_HD1 = find(obj.meta.channel_order == 525);
                 channel_HD2 = find(obj.meta.channel_order == 625);
     
                 [obj.HbR_Cache, obj.HbO_Cache] = NeuroWide.process.calcHb(obj.raw_data(:,:,:,channel_HD1), obj.raw_data(:,:,:,channel_HD2));
             end
-            val = obj.HbO_Cache;
+            val = obj.HbO_Cache * scale;
         end
 
-        function val = HbR(obj)
+        function val = HbR(obj, scale)
+            if nargin == 1
+                scale = 1e6;
+            end
             if isempty(obj.HbR_Cache)
                 channel_HD1 = find(obj.meta.channel_order == 525);
                 channel_HD2 = find(obj.meta.channel_order == 625);
     
                 [obj.HbR_Cache, obj.HbO_Cache] = NeuroWide.process.calcHb(obj.raw_data(:,:,:,channel_HD1), obj.raw_data(:,:,:,channel_HD2));
             end
-            val = obj.HbR_Cache;
+            val = obj.HbR_Cache * scale;
         end
 
-        function val = HbT(obj)
-            if isempty(obj.HbT_Cache)
-                obj.HbT_Cache = obj.HbR + obj.HbO;
+        function val = HbT(obj, scale)
+            if nargin == 1
+                scale = 1e6;
             end
-            val = obj.HbT_Cache;
+            if isempty(obj.HbT_Cache)
+                obj.HbT_Cache = obj.HbR(1) + obj.HbO(1);
+            end
+            val = obj.HbT_Cache * scale;
         end
 
         % apply hemodynamic correction
-        function val = rfp_HD(obj)
+        function val = rfp_HD(obj, scale)
+            if nargin == 1
+                scale = 100;
+            end
             if isempty(obj.rfp_HD_Cache)
                 channel_HD1 = find(obj.meta.channel_order == 525);
                 channel_HD2 = find(obj.meta.channel_order == 625);
 
                 tmpHbRed = obj.raw_data(:,:,:,channel_HD2) ./ mean(obj.raw_data(:,:,:,channel_HD2),3);
                 tmpHbGreen = obj.raw_data(:,:,:,channel_HD1) ./ mean(obj.raw_data(:,:,:,channel_HD1),3);
-                obj.rfp_HD_Cache = (obj.rfp + 1) ./ (tmpHbRed.^0.8.*tmpHbGreen.^0.4) - 1;
+                obj.rfp_HD_Cache = (obj.rfp(1) + 1) ./ (tmpHbRed.^0.8.*tmpHbGreen.^0.4) - 1;
             end
-            val = obj.rfp_HD_Cache;
+            val = obj.rfp_HD_Cache * scale;
         end
 
-        function val = gfp_HD(obj)
+        function val = gfp_HD(obj, scale)
+            if nargin == 1
+                scale = 100;
+            end
             if isempty(obj.gfp_HD_Cache)
                 tmpWL = [470,515];
                 tmpExtinction = NeuroWide.process.getExtinctions(tmpWL);     % in cm
                 tmpPathEx = NeuroWide.process.pathlengths(tmpWL(1),0.4)/2;       % pathlengths returns in cm
                 tmpPathEm = NeuroWide.process.pathlengths(tmpWL(2),0.4)/2;
-                tmpMuaEx = (tmpExtinction(1,1).*obj.HbO) + (tmpExtinction(1,2).*obj.HbR);
-                tmpMuaEm = (tmpExtinction(2,1).*obj.HbO) + (tmpExtinction(2,2).*obj.HbR);
+                tmpMuaEx = (tmpExtinction(1,1).*obj.HbO(1)) + (tmpExtinction(1,2).*obj.HbR(1));
+                tmpMuaEm = (tmpExtinction(2,1).*obj.HbO(1)) + (tmpExtinction(2,2).*obj.HbR(1));
                 
-                obj.gfp_HD_Cache = (obj.gfp + 1)./exp(-(tmpMuaEx.*tmpPathEx + tmpMuaEm.*tmpPathEm))-1;
+                obj.gfp_HD_Cache = (obj.gfp(1) + 1)./exp(-(tmpMuaEx.*tmpPathEx + tmpMuaEm.*tmpPathEm))-1;
             end
-            val = obj.gfp_HD_Cache;
+            val = obj.gfp_HD_Cache * scale;
         end
 
         % processing functions
