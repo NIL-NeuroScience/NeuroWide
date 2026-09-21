@@ -38,8 +38,8 @@ addParameter(p,'num_cores',4);
 
 parse(p,varargin{:});
 %%
-delete(gcp('nocreate'));
-parpool('local',p.Results.num_cores);
+% delete(gcp('nocreate'));
+% parpool('local',p.Results.num_cores);
 
 %% organize files
 
@@ -175,44 +175,61 @@ end
 
 %% create allen masks
 
+reg_filename = fullfile(Mouse, 'DataAnalysis/ROIs.mat');
+reg_files = NeuroWide.utilities.find_reg(reg_filename, 'parcellation', p.Results.load_dir, 1);
+
 allen_exist = who('-file', fullfile(files.save_dir, 'ROIs.mat'));
 allen_exist = ismember('parcellation', allen_exist);
 
 if p.Results.newROIs || ~allen_exist
-    
     LEDs = [dataIn(dataIn_idx).led(:).type];
 
-    if p.Results.allenRef
-        rfp_idx = p.Results.allenRef;
-    else
-        rfp_idx = find(LEDs==565);
+    if ~isempty(reg_files)
+        allen_path = reg_files{1};
+        dataIn_moving = jsondecode(fileread(fullfile(fileparts(fileparts(allen_path)), 'dataIn.json')));
         
-        if isempty(rfp_idx)
-            rfp_idx = 1;
-        end
-    end
+        LEDs_moving = [dataIn_moving(1).led(:).type];
+        moving = squeeze(dataIn_moving(1).template(find(LEDs_moving==525),:,:));
+        fixed = squeeze(dataIn(1).template(find(LEDs==525),:,:));
 
-    if data_bin
-        rawData = NeuroWide.io.data_1P(fullfile(files.onephoton,sprintf('Run%02i',list_runs(1))));
-        rotation = rawData.meta.rotation;
-        rawData = std(rawData.raw_data(:,:,:,rfp_idx),0,3);
-
-        parcellation = NeuroWide.allenAtlas.allenAtlas(rawData,brain_mask,hem);
-    else
-
-        importSettings.mp = 1;
-        importSettings.cores= 4;
-        importSettings.doNorm = 0;
-        importSettings.doCat=0;
-        importSettings.nImport = 0;
-        importSettings.nChannels = numel(LEDs);
+        tform = NeuroWide.process.brain_register(moving, fixed);
         
-        rawData = NeuroWide.io.andorDATImporter(fullfile(files.onephoton,sprintf('Run%02i',list_runs(1))),importSettings);
-        rawData = std(rawData(:,:,:,rfp_idx),0,3);
+        parcellation = load(allen_path,'parcellation').parcellation;
+        reg_parcells = imwarp(cat(3, parcellation.Masks(:,:,:,1), parcellation.Masks(:,:,:,2)))
+    else
     
-        rotation = dataIn(1).rotation;
+        if p.Results.allenRef
+            rfp_idx = p.Results.allenRef;
+        else
+            rfp_idx = find(LEDs==565);
+            
+            if isempty(rfp_idx)
+                rfp_idx = 1;
+            end
+        end
+    
+        if data_bin
+            data = NeuroWide.io.data_1P(fullfile(files.onephoton,sprintf('Run%02i',list_runs(1))));
+            rotation = data.meta.rotation;
+            data = std(data.raw_data(:,:,:,rfp_idx),0,3);
+    
+            parcellation = NeuroWide.allenAtlas.allenAtlas(data,brain_mask,hem);
+        else
+    
+            importSettings.mp = 1;
+            importSettings.cores= 4;
+            importSettings.doNorm = 0;
+            importSettings.doCat=0;
+            importSettings.nImport = 0;
+            importSettings.nChannels = numel(LEDs);
+            
+            data = NeuroWide.io.andorDATImporter(fullfile(files.onephoton,sprintf('Run%02i',list_runs(1))),importSettings);
+            data = std(data(:,:,:,rfp_idx),0,3);
         
-        parcellation = NeuroWide.allenAtlas.allenAtlas(imrotate(rawData,rotation),brain_mask,hem);
+            rotation = dataIn(1).rotation;
+            
+            parcellation = NeuroWide.allenAtlas.allenAtlas(imrotate(data,rotation),brain_mask,hem);
+        end
     end
     save(fullfile(files.save_dir,'ROIs.mat'),'parcellation','rotation','-append');
 end
@@ -237,52 +254,46 @@ for Run = list_runs
     
     if data_bin
         files.bin = fullfile(files.onephoton,sprintf('Run%02i',Run));
-        rawData = NeuroWide.io.data_1P(files.bin);
+        data = NeuroWide.io.data_1P(files.bin);
 
         masks = sum(parcellation.Masks,4);
         Signals = struct;
 
         if gfp_exist
-            gfp_HD = rawData.gfp_HD;
-            gfp = rawData.gfp;
-            Signals.gfp_HD = NeuroWide.process.parcellate(gfp_HD,masks.*vessel_mask);
-            Signals.gfp = NeuroWide.process.parcellate(gfp,masks.*vessel_mask);
+            Signals.gfp_HD = NeuroWide.process.parcellate(data.gfp_HD,masks.*vessel_mask);
+            Signals.gfp = NeuroWide.process.parcellate(data.gfp,masks.*vessel_mask);
         end
         if rfp_exist
-            rfp_HD = rawData.rfp_HD;
-            rfp = rawData.rfp;
-            Signals.rfp_HD = NeuroWide.process.parcellate(rfp_HD,masks.*vessel_mask);
-            Signals.rfp = NeuroWide.process.parcellate(rfp,masks.*vessel_mask);
+            Signals.rfp_HD = NeuroWide.process.parcellate(data.rfp_HD,masks.*vessel_mask);
+            Signals.rfp = NeuroWide.process.parcellate(data.rfp,masks.*vessel_mask);
         end
-        HbO = rawData.HbO;
-        HbR = rawData.HbR;
-        HbT = rawData.HbT;
     else
         files.h5 = fullfile(files.processed,sprintf('run%04i.h5',Run));
-    
+        data = struct;
+
         masks = sum(parcellation.Masks,4);
     
         Signals = struct;
         if gfp_exist
-            gfp_HD = 100*h5read(files.h5,'/gfp/normHD');
-            gfp = 100*h5read(files.h5,'/gfp/norm');
+            data.gfp_HD = 100*h5read(files.h5,'/gfp/normHD');
+            data.gfp = 100*h5read(files.h5,'/gfp/norm');
             Signals.gfp_HD = NeuroWide.process.parcellate(gfp_HD,masks.*vessel_mask);
             Signals.gfp = NeuroWide.process.parcellate(gfp,masks.*vessel_mask);
         end
         if rfp_exist
-            rfp_HD = 100*h5read(files.h5,'/rfp/normHD');
-            rfp = 100*h5read(files.h5,'/rfp/norm');
+            data.rfp_HD = 100*h5read(files.h5,'/rfp/normHD');
+            data.rfp = 100*h5read(files.h5,'/rfp/norm');
             Signals.rfp_HD = NeuroWide.process.parcellate(rfp_HD,masks.*vessel_mask);
             Signals.rfp = NeuroWide.process.parcellate(rfp,masks.*vessel_mask);
         end
-        HbO = 1e6*h5read(files.h5,'/hemodynamics/HbO');
-        HbR = 1e6*h5read(files.h5,'/hemodynamics/Hb');
-        HbT = HbO+HbR;
+        data.HbO = 1e6*h5read(files.h5,'/hemodynamics/HbO');
+        data.HbR = 1e6*h5read(files.h5,'/hemodynamics/Hb');
+        data.HbT = data.HbO+data.HbR;
     end
 
-    Signals.HbO = NeuroWide.process.parcellate(HbO,masks);
-    Signals.HbR = NeuroWide.process.parcellate(HbR,masks);
-    Signals.HbT = NeuroWide.process.parcellate(HbT,masks);
+    Signals.HbO = NeuroWide.process.parcellate(data.HbO,masks);
+    Signals.HbR = NeuroWide.process.parcellate(data.HbR,masks);
+    Signals.HbT = NeuroWide.process.parcellate(data.HbT,masks);
 
     %% process behavior
 
@@ -298,7 +309,7 @@ for Run = list_runs
         if beh_mp4
             cam_folder = fullfile(files.camera,sprintf('Run%02i',Run));
             cam_folder = [cam_folder,'.tif'];
-            cam_images = double(tiffreadVolume(cam_folder));
+            cam_images = double(NeuroWide.io.loadTifStack(cam_folder));
         else
             cam_folder = fullfile(files.camera,sprintf('Run%02i',Run));
             cam_images = dir([cam_folder,'/*.tiff']);
@@ -340,7 +351,7 @@ for Run = list_runs
     % Correlation images
     metadata = struct;
     if gfp_exist
-        [metadata.rMaps.gfpHbT,f] = NeuroWide.connectivity.corr(brain_mask.*gfp_HD,HbT,3,plot=true);clim([-1 1]);axis image off;
+        [metadata.rMaps.gfpHbT,f] = NeuroWide.connectivity.corr(brain_mask.*data.gfp_HD,data.HbT,3,plot=true);clim([-1 1]);axis image off;
         title('GFP vs. HbT');
         img_name = sprintf('gfpHbTCorr_Run%02i',Run);
         exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
@@ -349,13 +360,13 @@ for Run = list_runs
 
     if rfp_exist
         if gfp_exist
-            [metadata.rMaps.rfpgfp,f] = NeuroWide.connectivity.corr(brain_mask.*gfp_HD,rfp_HD,3,plot=true);clim([-1 1]);axis image off;
+            [metadata.rMaps.rfpgfp,f] = NeuroWide.connectivity.corr(brain_mask.*data.gfp_HD,data.rfp_HD,3,plot=true);clim([-1 1]);axis image off;
             title('GFP vs. RFP');
             img_name = sprintf('gfprfpCorr_Run%02i',Run);
             exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
             savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
         end
-        [metadata.rMaps.rfpHbT,f] = NeuroWide.connectivity.corr(brain_mask.*rfp_HD,HbT,3,plot=true);clim([-1 1]);axis image off;
+        [metadata.rMaps.rfpHbT,f] = NeuroWide.connectivity.corr(brain_mask.*data.rfp_HD,data.HbT,3,plot=true);clim([-1 1]);axis image off;
         title('RFP vs. HbT');
         img_name = sprintf('rfpHbTCorr_Run%02i',Run);
         exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
@@ -406,7 +417,7 @@ for Run = list_runs
             [metadata.spc.rfp] = NeuroWide.spectra.spectra(Signals.rfp_HD, settings.fs);
             
             f = plotSpectra(metadata.spc.rfp, metadata.spc.fr, parcellation.labelsLR, [0, 5]);
-            title('GFP spectra');
+            title('RFP spectra');
             img_name = sprintf('spectra_rfp_Run%02i',Run);
             exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
             savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
@@ -414,7 +425,7 @@ for Run = list_runs
         [metadata.spc.HbT] = NeuroWide.spectra.spectra(Signals.HbT, settings.fs);
         
         f = plotSpectra(metadata.spc.HbT, metadata.spc.fr, parcellation.labelsLR, [0, 5]);
-        title('GFP spectra');
+        title('HbT spectra');
         img_name = sprintf('spectra_HbT_Run%02i',Run);
         exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
         savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
@@ -448,6 +459,139 @@ for Run = list_runs
             exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
             savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
         end
+    end
+
+    % STIMULATION
+    if settings.StimulusRepetitions
+        LED = find(diff(digitalInput.LED470Signal)==1);
+        LEDstim= find(diff(digitalInput.StimulusTrigger)==1);
+        LEDstim = LEDstim(1:settings.StimulusDurationLong*settings.StimulusFrequency:end);
+        [~,idx] = min(abs(LEDstim' - LED));
+
+        rfp_stim = NeuroWide.process.trialAvg(Signals.rfp_HD, idx, 50, 100, dim=1, rem_baseline=1);
+        gfp_stim = NeuroWide.process.trialAvg(Signals.gfp_HD, idx, 50, 100, dim=1, rem_baseline=1);
+        HbT_stim = NeuroWide.process.trialAvg(Signals.HbT, idx, 50, 100, dim=1, rem_baseline=1);
+        HbO_stim = NeuroWide.process.trialAvg(Signals.HbO, idx, 50, 100, dim=1, rem_baseline=1);
+        HbR_stim = NeuroWide.process.trialAvg(Signals.HbR, idx, 50, 100, dim=1, rem_baseline=1);
+        rfp_map = NeuroWide.process.trialAvg(data.rfp_HD, idx, 50, 100, dim=3, rem_baseline=1);
+        gfp_map = NeuroWide.process.trialAvg(data.gfp_HD, idx, 50, 100, dim=3, rem_baseline=1);
+        HbT_map = NeuroWide.process.trialAvg(data.HbT, idx, 50, 100, dim=3, rem_baseline=1);
+
+        if settings.doVIS
+            stim_type = 'Visual';
+            reg = 12;
+        else
+            stim_type = 'Air Puff';
+            reg = 3;
+        end
+        
+        f = figure(Position=[100,100,1000,700]);
+        tl = tiledlayout(3,3,TileSpacing='compact',Padding='compact');
+        title(tl, sprintf([stim_type, ' Stimulation. %01i Hz for %01i s'], settings.StimulusFrequency, settings.StimulusDurationLong), FontSize=16);
+        
+        nexttile(1);
+        plot(-5:0.1:10,rfp_stim(:,reg) / std(rfp_stim(:,reg), 0),color=NeuroWide.colors.r);
+        xregion(0,2);
+        box off;
+        AX = gca;
+        AX.XAxis.Visible = 'off';
+        ylabel('rfp (Z)');
+        
+        nexttile(4);
+        plot(-5:0.1:10,gfp_stim(:,reg) / std(gfp_stim(:,reg), 0),color=NeuroWide.colors.g);
+        xregion(0,2);
+        box off;
+        AX = gca;
+        AX.XAxis.Visible = 'off';
+        ylabel('gfp (Z)');
+        
+        nexttile(7);
+        hold on;
+        plot(-5:0.1:10,HbT_stim(:,reg) / std(HbT_stim(:,reg), 0),color=[0,0,0]);
+        plot(-5:0.1:10,HbO_stim(:,reg) / std(HbO_stim(:,reg), 0),color=NeuroWide.colors.r);
+        plot(-5:0.1:10,HbR_stim(:,reg) / std(HbR_stim(:,reg), 0),color=NeuroWide.colors.b);
+        xregion(0,2);
+        xlabel('Time since stimulus (s)');
+        box off;
+        ylabel('Hb (Z)');
+        
+        rfp_ratio = (max(rfp_map(:,:,51:end), [], 3) - mean(rfp_map(:,:,1:50),3)) ./ std(rfp_map(:,:,1:50),0,3);
+        gfp_ratio = (max(gfp_map(:,:,51:end), [], 3) - mean(gfp_map(:,:,1:50),3)) ./ std(gfp_map(:,:,1:50),0,3);
+        HbT_ratio = (max(HbT_map(:,:,51:end), [], 3) - mean(HbT_map(:,:,1:50),3)) ./ std(HbT_map(:,:,1:50),0,3);
+        
+        single_cmp = cat(2, linspace(0,1,256)', zeros(256,1), zeros(256,1));
+        AX = nexttile(2);
+        imagesc(rfp_ratio, AlphaData=brain_mask);
+        cb = colorbar;
+        cb.Label.String = 'Z';
+        clim([0, prctile(rfp_ratio(:), 99)]);
+        axis image off;
+        colormap(AX, single_cmp);
+        
+        AX = nexttile(5);
+        imagesc(gfp_ratio, AlphaData=brain_mask);
+        cb = colorbar;
+        cb.Label.String = 'Z';
+        clim([0, prctile(gfp_ratio(:), 99)]);
+        axis image off;
+        colormap(AX, single_cmp(:,[2,1,3]));
+        
+        AX = nexttile(8);
+        imagesc(HbT_ratio, AlphaData=brain_mask);
+        cb = colorbar;
+        cb.Label.String = 'Z';
+        clim([0, prctile(HbT_ratio(:), 99)]);
+        axis image off;
+        colormap(AX, single_cmp(:,[2,3,1]));
+        
+        rgb_img = cat(3, rfp_ratio / prctile(rfp_ratio(:), 99), ...
+                        gfp_ratio / prctile(gfp_ratio(:), 99), ...
+                        HbT_ratio / prctile(HbT_ratio(:), 99));
+        
+        nexttile(3);
+        h = imshow(rgb_img);
+        h.AlphaData = brain_mask;
+        
+        nexttile(6);
+        XC_gfp_rfp = NeuroWide.IRF.xcorr(gfp_stim, rfp_stim, settings.fs*5);
+        XC_gfp_HbT = NeuroWide.IRF.xcorr(gfp_stim, HbT_stim, settings.fs*5);
+        XC_rfp_HbT = NeuroWide.IRF.xcorr(rfp_stim, HbT_stim, settings.fs*5);
+        hold on;
+        plot(-5:1/settings.fs:5,XC_gfp_rfp(:,reg), color=NeuroWide.colors.y);
+        plot(-5:1/settings.fs:5,XC_gfp_HbT(:,reg), color=NeuroWide.colors.c);
+        plot(-5:1/settings.fs:5,XC_rfp_HbT(:,reg), color=NeuroWide.colors.p);
+        xline(0);
+        ylim([-1, 1]);
+        xlim([-5, 5]);
+        xlabel('Delay (s)');
+        ylabel('r');
+        title('Cross-correlation');
+        
+        mask = brain_mask;
+        mask(isnan(mask)) = 0;
+        mask = logical(mask);
+        spatial_r = corrcoef([rfp_ratio(mask),gfp_ratio(mask),HbT_ratio(mask)]);
+        nexttile(9);
+        bar([spatial_r(2,1), spatial_r(3,1), spatial_r(2,3)]);
+        box off;
+        ylabel('r');
+        xticklabels({'rfp-gfp','rfp-HbT','gfp-HbT'});
+        title('Spatial Correlation');
+        
+        img_name = sprintf('stimulation_Run%02i', Run);
+        exportgraphics(f,fullfile(files.images,[img_name '.png']),'Resolution',300,'BackgroundColor',[1 1 1]);
+        savefig(f,fullfile(files.images,[img_name '.fig'])); close(f);
+
+        % store metadata
+        
+        metadata.stim.rfp_ratio = rfp_ratio;
+        metadata.stim.gfp_ratio = gfp_ratio;
+        metadata.stim.HbT_ratio = HbT_ratio;
+        
+        metadata.stim.t_bef = 50;
+        metadata.stim.t_aft = 150;
+        
+        metadata.stim.stim_idx = idx;
     end
     
 
