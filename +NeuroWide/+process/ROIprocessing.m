@@ -28,7 +28,7 @@ function ROIprocessing(Mouse,Date,Runs,varargin)
 p = inputParser;
 addParameter(p,'behCam',true);
 addParameter(p,'newROIs',false);
-addParameter(p,'extraProcessing',false);
+addParameter(p,'extraProcessing',true);
 addParameter(p,'GRAB','none');
 addParameter(p,'load_dir','/projectnb/devorlab/bcraus/HRF/1P');
 addParameter(p,'save_dir','/projectnb/devorlab/bcraus/HRF/1P');

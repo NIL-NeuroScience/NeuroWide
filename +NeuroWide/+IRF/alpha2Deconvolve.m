@@ -203,7 +203,7 @@ r = NeuroWide.connectivity.corr(HbT ./ std(HbT, 0, 3), pred_HbT, 3);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% EXTRA FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % cost function for IRF optimization using direct method (MSE)
-function J = f_hrf_cost_func(t1, t2, tau1, tau2, A, B, range, X_mat, y)
+    function J = f_hrf_cost_func(t1, t2, tau1, tau2, A, B, range, X_mat, y)
     HRF1 = NeuroWide.IRF.alpha_IRF(t1, tau1, 0.5, A, 0, range);
     HRF2 = NeuroWide.IRF.alpha_IRF(t2, tau2, 0.5, B, 0, range);
 
